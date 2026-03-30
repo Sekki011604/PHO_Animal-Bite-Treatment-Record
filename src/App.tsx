@@ -7,21 +7,9 @@ import ViewRecordPage from './pages/ViewRecordPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import LoginPage from './pages/LoginPage'
 import CreateStaffPage from './pages/CreateStaffPage'
+import { useAuth, type UserRole } from './contexts/AuthContext'
 
-type UserRole = 'admin' | 'staff'
-
-type AuthState = {
-  isAuthenticated: boolean
-  userRole: UserRole | null
-  email: string | null
-}
-
-const MOCK_CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
-  'admin@pho.gov': { password: 'Admin@123', role: 'admin' },
-  'staff@pho.gov': { password: 'Staff@123', role: 'staff' },
-}
-
-function SidebarLayout({ userRole, onLogout }: { userRole: UserRole; onLogout: () => void }) {
+function SidebarLayout({ userRole, onLogout }: { userRole: Exclude<UserRole, null>; onLogout: () => Promise<void> }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -96,8 +84,7 @@ function SidebarLayout({ userRole, onLogout }: { userRole: UserRole; onLogout: (
             type="button"
             onClick={() => {
               setIsSidebarOpen(false)
-              onLogout()
-              navigate('/')
+              void onLogout().then(() => navigate('/'))
             }}
             className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-secondary"
           >
@@ -176,34 +163,22 @@ function SidebarLayout({ userRole, onLogout }: { userRole: UserRole; onLogout: (
 }
 
 export default function App() {
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    userRole: null,
-    email: null,
-  })
+  const { user, role, loading, signOut } = useAuth()
 
-  const handleLogin = (email: string, password: string) => {
-    const record = MOCK_CREDENTIALS[email.trim().toLowerCase()]
-    if (!record || record.password !== password) {
-      return { ok: false, message: 'Invalid email or password.' }
-    }
-
-    setAuthState({
-      isAuthenticated: true,
-      userRole: record.role,
-      email: email.trim().toLowerCase(),
-    })
-
-    return { ok: true as const }
+  const handleLogout = async () => {
+    await signOut()
   }
 
-  const handleLogout = () => {
-    setAuthState({
-      isAuthenticated: false,
-      userRole: null,
-      email: null,
-    })
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white text-text-darkgreen">
+        <div className="mr-3 h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+        Loading session...
+      </div>
+    )
   }
+
+  const isAuthenticated = Boolean(user)
 
   return (
     <BrowserRouter>
@@ -211,16 +186,16 @@ export default function App() {
         <Route
           path="/"
           element={
-            authState.isAuthenticated
+            isAuthenticated
               ? <Navigate to="/dashboard" replace />
-              : <LoginPage onLogin={handleLogin} />
+              : <LoginPage />
           }
         />
         <Route
           path="/*"
           element={
-            authState.isAuthenticated && authState.userRole
-              ? <SidebarLayout userRole={authState.userRole} onLogout={handleLogout} />
+            isAuthenticated && role
+              ? <SidebarLayout userRole={role} onLogout={handleLogout} />
               : <Navigate to="/" replace />
           }
         />

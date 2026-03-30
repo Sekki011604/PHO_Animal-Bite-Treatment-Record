@@ -1,33 +1,36 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
-type LoginResult = {
-  ok: boolean
-  message?: string
-}
-
-type LoginPageProps = {
-  onLogin: (email: string, password: string) => LoginResult
-}
-
-export default function LoginPage({ onLogin }: LoginPageProps) {
+export default function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
+    setLoading(true)
 
-    const result = onLogin(email, password)
-    if (!result.ok) {
-      setError(result.message || 'Unable to login.')
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    })
+
+    if (signInError) {
+      const msg = signInError.message.toLowerCase().includes('invalid')
+        ? 'Invalid credentials'
+        : signInError.message
+      setError(msg)
+      setLoading(false)
       return
     }
 
     navigate('/dashboard', { replace: true })
+    setLoading(false)
   }
 
   return (
@@ -51,6 +54,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               id="email"
               type="email"
               required
+              disabled={loading}
               value={email}
               onChange={event => setEmail(event.target.value)}
               className="w-full rounded-xl border border-border-lightgreen bg-white px-3 py-2.5 text-sm text-text-darkgreen outline-none transition focus:ring-2 focus:ring-primary-phogreen/30"
@@ -64,6 +68,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               id="password"
               type="password"
               required
+              disabled={loading}
               value={password}
               onChange={event => setPassword(event.target.value)}
               className="w-full rounded-xl border border-border-lightgreen bg-white px-3 py-2.5 text-sm text-text-darkgreen outline-none transition focus:ring-2 focus:ring-primary-phogreen/30"
@@ -75,16 +80,16 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
           <button
             type="submit"
+            disabled={loading}
             className="w-full rounded-xl bg-primary-phogreen px-4 py-2.5 text-sm font-semibold text-surface-white transition hover:bg-primary-phogreen-dark"
           >
-            Login
+            {loading ? 'Signing in...' : 'Login'}
           </button>
         </form>
 
         <div className="mt-4 rounded-xl border border-secondary-gold/40 bg-surface-cream p-3 text-xs text-pho-text-secondary">
-          <p className="font-semibold text-text-darkgreen">Mock Credentials</p>
-          <p className="mt-1">Admin: admin@pho.gov / Admin@123</p>
-          <p>Staff: staff@pho.gov / Staff@123</p>
+          <p className="font-semibold text-text-darkgreen">Supabase Login</p>
+          <p className="mt-1">Use an existing Supabase email and password.</p>
         </div>
       </div>
     </div>

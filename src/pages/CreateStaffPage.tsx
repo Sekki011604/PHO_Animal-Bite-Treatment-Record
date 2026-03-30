@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { UserPlus2 } from 'lucide-react'
 import { toast } from '@blinkdotnew/ui'
 import { municipalities, municipalityBarangayMap } from '../lib/municipalityBarangayMap'
+import { supabase } from '../lib/supabase'
 
 type CreateStaffFormState = {
   fullName: string
@@ -21,6 +22,7 @@ const initialFormState: CreateStaffFormState = {
 
 export default function CreateStaffPage() {
   const [form, setForm] = useState<CreateStaffFormState>(initialFormState)
+  const [submitting, setSubmitting] = useState(false)
 
   const barangays = useMemo(() => {
     if (!form.municipality) return []
@@ -36,10 +38,65 @@ export default function CreateStaffPage() {
     setForm(prev => ({ ...prev, [key]: value }))
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    toast.success('Staff account form submitted (mock).')
-    setForm(initialFormState)
+    setSubmitting(true)
+
+    try {
+      const normalizedEmail = form.email.trim().toLowerCase()
+      const { data: adminSessionData } = await supabase.auth.getSession()
+      const adminSession = adminSessionData.session
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: form.password,
+        options: {
+          data: {
+            full_name: form.fullName,
+            role: 'staff',
+          },
+        },
+      })
+
+      if (signUpError) {
+        throw signUpError
+      }
+
+      if (!signUpData.user) {
+        throw new Error('Unable to create staff account user in auth.')
+      }
+
+      const timestamp = new Date().toISOString()
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: signUpData.user.id,
+        email: normalizedEmail,
+        full_name: form.fullName,
+        role: 'staff',
+        municipality: form.municipality,
+        barangay: form.barangay,
+        created_at: timestamp,
+        updated_at: timestamp,
+      })
+
+      if (profileError) {
+        throw profileError
+      }
+
+      if (adminSession?.access_token && adminSession.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        })
+      }
+
+      toast.success('Staff account created successfully.')
+      setForm(initialFormState)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create staff account.'
+      toast.error(message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -62,6 +119,7 @@ export default function CreateStaffPage() {
             <input
               id="fullName"
               required
+              disabled={submitting}
               value={form.fullName}
               onChange={event => handleChange('fullName', event.target.value)}
               className="w-full rounded-xl border border-border-lightgreen bg-white px-3 py-2.5 text-sm text-text-darkgreen outline-none transition focus:ring-2 focus:ring-primary-phogreen/30"
@@ -75,6 +133,7 @@ export default function CreateStaffPage() {
               id="email"
               type="email"
               required
+              disabled={submitting}
               value={form.email}
               onChange={event => handleChange('email', event.target.value)}
               className="w-full rounded-xl border border-border-lightgreen bg-white px-3 py-2.5 text-sm text-text-darkgreen outline-none transition focus:ring-2 focus:ring-primary-phogreen/30"
@@ -88,6 +147,7 @@ export default function CreateStaffPage() {
               id="password"
               type="password"
               required
+              disabled={submitting}
               value={form.password}
               onChange={event => handleChange('password', event.target.value)}
               className="w-full rounded-xl border border-border-lightgreen bg-white px-3 py-2.5 text-sm text-text-darkgreen outline-none transition focus:ring-2 focus:ring-primary-phogreen/30"
@@ -100,6 +160,7 @@ export default function CreateStaffPage() {
             <select
               id="municipality"
               required
+              disabled={submitting}
               value={form.municipality}
               onChange={event => handleChange('municipality', event.target.value)}
               className="w-full rounded-xl border border-border-lightgreen bg-white px-3 py-2.5 text-sm text-text-darkgreen outline-none transition focus:ring-2 focus:ring-primary-phogreen/30"
@@ -116,7 +177,7 @@ export default function CreateStaffPage() {
             <select
               id="barangay"
               required
-              disabled={!form.municipality}
+              disabled={!form.municipality || submitting}
               value={form.barangay}
               onChange={event => handleChange('barangay', event.target.value)}
               className="w-full rounded-xl border border-border-lightgreen bg-white px-3 py-2.5 text-sm text-text-darkgreen outline-none transition disabled:cursor-not-allowed disabled:bg-muted"
@@ -131,12 +192,17 @@ export default function CreateStaffPage() {
           <div className="md:col-span-2">
             <button
               type="submit"
+              disabled={submitting}
               className="rounded-xl bg-primary-phogreen px-4 py-2.5 text-sm font-semibold text-surface-white transition hover:bg-primary-phogreen-dark"
             >
-              Create Staff Account
+              {submitting ? 'Creating Account...' : 'Create Staff Account'}
             </button>
           </div>
         </form>
+
+        <p className="mt-4 text-xs text-pho-text-secondary">
+          Note: This action signs up a new Supabase auth user and writes staff details to the profiles table.
+        </p>
       </section>
     </div>
   )

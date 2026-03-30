@@ -39,42 +39,62 @@
    ⚠️ AGENT MUST REPLACE placeholder values with a custom palette.
    ──────────────────────────────────────────────────────────────────────────── */
 :root {
-  --background: 210 20% 98%;
-  --foreground: 211 33% 18%;
+  /* PHO logo-inspired semantic tokens (approximate until direct logo sampling is available). */
+  --pho-green-light: 146 34% 44%;
+  --pho-green-main: 148 44% 33%;
+  --pho-green-dark: 146 44% 24%;
+  --pho-cream-light: 52 100% 98%;
+  --pho-cream-main: 52 70% 95%;
+  --pho-cream-dark: 52 45% 89%;
+  --pho-gold-light: 46 100% 75%;
+  --pho-gold-main: 32 86% 60%;
+  --pho-gold-dark: 35 69% 43%;
+  --pho-text-primary: 149 44% 16%;
+  --pho-text-secondary: 145 18% 33%;
+
+  --pho-gradient-primary: linear-gradient(
+    120deg,
+    hsl(var(--pho-green-dark)) 0%,
+    hsl(var(--pho-green-main)) 52%,
+    hsl(var(--pho-cream-main)) 100%
+  );
+
+  --background: 0 0% 100%;
+  --foreground: var(--pho-text-primary);
   --card: 0 0% 100%;
-  --card-foreground: 211 33% 18%;
+  --card-foreground: var(--pho-text-primary);
   --popover: 0 0% 100%;
-  --popover-foreground: 211 33% 18%;
-  --primary: 210 63% 28%;
+  --popover-foreground: var(--pho-text-primary);
+  --primary: var(--pho-green-main);
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 23% 94%;
-  --secondary-foreground: 210 28% 24%;
-  --muted: 210 18% 95%;
-  --muted-foreground: 210 14% 43%;
-  --accent: 196 72% 39%;
+  --secondary: var(--pho-cream-light);
+  --secondary-foreground: var(--pho-text-primary);
+  --muted: var(--pho-cream-main);
+  --muted-foreground: var(--pho-text-secondary);
+  --accent: var(--pho-gold-main);
   --accent-foreground: 0 0% 100%;
   --destructive: 0 72% 50%;
   --destructive-foreground: 0 0% 100%;
-  --border: 210 17% 88%;
-  --input: 210 17% 88%;
-  --ring: 196 72% 39%;
+  --border: 147 26% 88%;
+  --input: 147 26% 88%;
+  --ring: var(--pho-gold-main);
 
   /* Charts - Professional and harmonious */
-  --chart-1: 210 63% 34%; /* Slightly lighter primary blue */
-  --chart-2: 196 72% 39%; /* Accent Teal/Cyan */
-  --chart-3: 151 46% 34%; /* Professional Green */
-  --chart-4: 35 84% 56%;  /* Subtle Yellow/Gold */
-  --chart-5: 347 68% 45%; /* Contrasting Accent */
+  --chart-1: var(--pho-green-main);
+  --chart-2: var(--pho-gold-main);
+  --chart-3: 171 42% 33%;
+  --chart-4: 37 76% 55%;
+  --chart-5: 12 60% 48%;
 
   /* Sidebar - Blends with background, primary/accent stand out */
-  --sidebar: 210 22% 97%; /* Matches background */
-  --sidebar-foreground: 211 33% 18%; /* Matches foreground */
-  --sidebar-primary: 210 63% 28%; /* Primary Blue */
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: var(--pho-text-primary);
+  --sidebar-primary: var(--pho-green-main);
   --sidebar-primary-foreground: 0 0% 100%; /* White */
-  --sidebar-accent: 196 72% 39%; /* Accent Teal/Cyan */
-  --sidebar-accent-foreground: 0 0% 100%; /* White */
-  --sidebar-border: 210 17% 88%; /* Light gray border */
-  --sidebar-ring: 196 72% 39%; /* Matches accent */
+  --sidebar-accent: var(--pho-gold-main);
+  --sidebar-accent-foreground: var(--pho-text-primary);
+  --sidebar-border: 147 26% 88%;
+  --sidebar-ring: var(--pho-gold-main);
 
   /* Fonts */
   --font-sans: 'DM Sans', sans-serif;
@@ -119,43 +139,42 @@
 .theme-glass.dark,
 .theme-midnight.dark,
 .theme-minimal.dark {
-  /* Dark Mode Palette - Sophisticated and high-contrast */
-  --background: 214 30% 12%; /* Very dark slate */
-  --foreground: 210 18% 92%; /* Light slate gray */
-  --card: 214 28% 15%; /* Dark gray for cards */
-  --card-foreground: 210 18% 92%;
-  --popover: 214 28% 15%;
-  --popover-foreground: 210 18% 92%;
-  --primary: 206 66% 60%; /* Lighter, more vibrant blue for dark mode primary */
-  --primary-foreground: 214 30% 12%; /* Dark background */
-  --secondary: 214 20% 22%; /* Muted dark gray */
-  --secondary-foreground: 210 18% 92%;
-  --muted: 214 20% 20%;
-  --muted-foreground: 210 14% 72%;
-  --accent: 192 70% 58%; /* Lighter, more vibrant accent for dark mode */
-  --accent-foreground: 214 30% 12%;
+  --background: 146 34% 10%;
+  --foreground: 46 35% 90%;
+  --card: 146 31% 13%;
+  --card-foreground: 46 35% 90%;
+  --popover: 146 31% 13%;
+  --popover-foreground: 46 35% 90%;
+  --primary: 145 41% 49%;
+  --primary-foreground: 146 34% 10%;
+  --secondary: 146 23% 18%;
+  --secondary-foreground: 46 35% 90%;
+  --muted: 145 20% 20%;
+  --muted-foreground: 46 18% 72%;
+  --accent: 42 70% 60%;
+  --accent-foreground: 146 34% 10%;
   --destructive: 0 72% 58%; /* Standard destructive red */
   --destructive-foreground: 0 0% 100%; /* White */
-  --border: 214 18% 28%; /* Darker border */
-  --input: 214 18% 28%;
-  --ring: 192 70% 58%; /* Matches dark mode accent */
+  --border: 146 18% 26%;
+  --input: 146 18% 26%;
+  --ring: 42 70% 60%;
 
   /* Charts - Harmonious dark mode */
-  --chart-1: 206 66% 60%; /* Lighter primary blue */
-  --chart-2: 192 70% 58%; /* Accent Teal/Cyan */
-  --chart-3: 151 48% 48%; /* Professional Green */
-  --chart-4: 35 84% 62%;  /* Subtle Yellow/Gold */
-  --chart-5: 347 70% 60%; /* Contrasting Accent */
+  --chart-1: 145 41% 49%;
+  --chart-2: 42 70% 60%;
+  --chart-3: 171 47% 49%;
+  --chart-4: 36 76% 64%;
+  --chart-5: 12 68% 64%;
 
   /* Sidebar - Dark mode */
-  --sidebar: 214 28% 15%; /* Dark gray */
-  --sidebar-foreground: 210 18% 92%; /* Light slate gray */
-  --sidebar-primary: 206 66% 60%; /* Primary Blue */
-  --sidebar-primary-foreground: 214 30% 12%; /* Dark background */
-  --sidebar-accent: 192 70% 58%; /* Accent Teal/Cyan */
-  --sidebar-accent-foreground: 214 30% 12%;
-  --sidebar-border: 214 18% 28%; /* Darker border */
-  --sidebar-ring: 192 70% 58%; /* Matches dark mode accent */
+  --sidebar: 144 43% 11%;
+  --sidebar-foreground: 46 35% 90%;
+  --sidebar-primary: 145 41% 49%;
+  --sidebar-primary-foreground: 146 34% 10%;
+  --sidebar-accent: 42 70% 60%;
+  --sidebar-accent-foreground: 146 34% 10%;
+  --sidebar-border: 146 18% 26%;
+  --sidebar-ring: 42 70% 60%;
 }
 
 @layer components {

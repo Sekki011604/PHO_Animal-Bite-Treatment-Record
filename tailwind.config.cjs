@@ -49,6 +49,42 @@ module.exports = {
 
       // ── Colors ─────────────────────────────────────────────────────────────
       colors: {
+        'primary-phogreen': {
+          light: '#4a946a',
+          DEFAULT: '#2f7a53',
+          dark: '#21573a',
+        },
+        'secondary-gold': {
+          light: '#ffe082',
+          DEFAULT: '#f0a040',
+          dark: '#b87622',
+        },
+        'text-darkgreen': '#163a27',
+        'surface-white': '#ffffff',
+        'surface-cream': '#fffef7',
+        'border-lightgreen': '#dcead9',
+        pho: {
+          green: {
+            light: '#2f7a53',
+            main: '#1e5b3a',
+            dark: '#124229',
+          },
+          cream: {
+            light: '#f5f0dc',
+            main: '#e9e2c7',
+            dark: '#d8cfaa',
+          },
+          gold: {
+            light: '#f4d47a',
+            main: '#d5a93a',
+            dark: '#9b7626',
+          },
+          text: {
+            primary: '#123626',
+            secondary: '#41584b',
+            inverse: '#ffffff',
+          },
+        },
         border:     'hsl(var(--border))',
         input:      'hsl(var(--input))',
         ring:       'hsl(var(--ring))',

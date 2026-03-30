@@ -18,7 +18,7 @@ export default function ViewRecordPage() {
         const raw = await blink.db.animalBiteRecords.get(id!) as Record<string, unknown>
         if (!raw) {
           toast.error('Record not found.')
-          navigate('/')
+          navigate('/dashboard')
           return
         }
         const r = raw
@@ -84,7 +84,7 @@ export default function ViewRecordPage() {
         })
       } catch {
         toast.error('Failed to load record.')
-        navigate('/')
+        navigate('/dashboard')
       } finally {
         setLoading(false)
       }
@@ -110,7 +110,7 @@ export default function ViewRecordPage() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
                 className="mb-3 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />

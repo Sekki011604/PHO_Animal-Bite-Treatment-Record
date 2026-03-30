@@ -1,23 +1,54 @@
-import { BrowserRouter, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
+import { BrowserRouter, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom'
+import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck, Menu, X, UserPlus2, LogOut } from 'lucide-react'
 import RecordsPage from './pages/RecordsPage'
 import NewRecordPage from './pages/NewRecordPage'
 import ViewRecordPage from './pages/ViewRecordPage'
 import AnalyticsPage from './pages/AnalyticsPage'
+import LoginPage from './pages/LoginPage'
+import CreateStaffPage from './pages/CreateStaffPage'
 
-function SidebarLayout() {
+type UserRole = 'admin' | 'staff'
+
+type AuthState = {
+  isAuthenticated: boolean
+  userRole: UserRole | null
+  email: string | null
+}
+
+const MOCK_CREDENTIALS: Record<string, { password: string; role: UserRole }> = {
+  'admin@pho.gov': { password: 'Admin@123', role: 'admin' },
+  'staff@pho.gov': { password: 'Staff@123', role: 'staff' },
+}
+
+function SidebarLayout({ userRole, onLogout }: { userRole: UserRole; onLogout: () => void }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const navItems = [
-    { to: '/', label: 'Records Overview', icon: LayoutDashboard, end: true },
-    { to: '/new', label: 'New Record', icon: FilePlus2 },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: '/new', label: 'Data Entry', icon: FilePlus2 },
     { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+    ...(userRole === 'admin' ? [{ to: '/admin/create-staff', label: 'Manage Staff', icon: UserPlus2 }] : []),
   ]
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_hsl(var(--secondary))_0%,_hsl(var(--background))_38%,_hsl(var(--background))_100%)] text-foreground lg:grid lg:grid-cols-[280px_1fr]">
-      <aside className="hidden lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-border/80 lg:bg-[hsl(var(--sidebar)/0.86)] lg:backdrop-blur-xl">
+    <div className="min-h-screen bg-white text-foreground">
+      {isSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-300"
+        />
+      )}
+
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-full w-72 transform flex-col border-r border-border/80 bg-[hsl(var(--sidebar)/0.96)] backdrop-blur-xl transition-transform duration-300 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="border-b border-border/80 px-6 py-6">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
@@ -41,9 +72,10 @@ function SidebarLayout() {
                   key={item.to}
                   to={item.to}
                   end={item.end}
+                  onClick={() => setIsSidebarOpen(false)}
                   className={({ isActive }) =>
                     `group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all ${
-                      isActive
+                      isActive || (item.to === '/dashboard' && location.pathname.startsWith('/record/'))
                         ? 'bg-primary text-primary-foreground shadow-md'
                         : 'text-[hsl(var(--sidebar-foreground))] hover:bg-secondary hover:text-foreground'
                     }`
@@ -60,6 +92,18 @@ function SidebarLayout() {
         </div>
 
         <div className="border-t border-border/80 p-5">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSidebarOpen(false)
+              onLogout()
+              navigate('/')
+            }}
+            className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-secondary"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
           <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary">
@@ -74,13 +118,23 @@ function SidebarLayout() {
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 backdrop-blur-xl">
+      <div className="flex min-h-screen flex-col bg-white">
+        <header className="sticky top-0 z-30 border-b border-border/70 bg-white">
           <div className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-            <div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(prev => !prev)}
+                aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white p-2 text-primary shadow-sm transition hover:bg-secondary"
+              >
+                {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+              <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-accent">Municipal Operations Dashboard</div>
               <div className="mt-1 text-lg font-semibold text-foreground lg:hidden">Health Forms Digitizer</div>
               <div className="mt-1 hidden text-sm text-muted-foreground lg:block">Manage digital animal bite treatment records, reporting, and analytics.</div>
+              </div>
             </div>
             <button
               onClick={() => navigate('/new')}
@@ -106,12 +160,14 @@ function SidebarLayout() {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main className="flex-1 bg-white px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <Routes>
-            <Route path="/" element={<RecordsPage />} />
+            <Route path="/dashboard" element={<RecordsPage />} />
             <Route path="/new" element={<NewRecordPage />} />
             <Route path="/record/:id" element={<ViewRecordPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/admin/create-staff" element={userRole === 'admin' ? <CreateStaffPage /> : <Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
       </div>
@@ -120,9 +176,55 @@ function SidebarLayout() {
 }
 
 export default function App() {
+  const [authState, setAuthState] = useState<AuthState>({
+    isAuthenticated: false,
+    userRole: null,
+    email: null,
+  })
+
+  const handleLogin = (email: string, password: string) => {
+    const record = MOCK_CREDENTIALS[email.trim().toLowerCase()]
+    if (!record || record.password !== password) {
+      return { ok: false, message: 'Invalid email or password.' }
+    }
+
+    setAuthState({
+      isAuthenticated: true,
+      userRole: record.role,
+      email: email.trim().toLowerCase(),
+    })
+
+    return { ok: true as const }
+  }
+
+  const handleLogout = () => {
+    setAuthState({
+      isAuthenticated: false,
+      userRole: null,
+      email: null,
+    })
+  }
+
   return (
     <BrowserRouter>
-      <SidebarLayout />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            authState.isAuthenticated
+              ? <Navigate to="/dashboard" replace />
+              : <LoginPage onLogin={handleLogin} />
+          }
+        />
+        <Route
+          path="/*"
+          element={
+            authState.isAuthenticated && authState.userRole
+              ? <SidebarLayout userRole={authState.userRole} onLogout={handleLogout} />
+              : <Navigate to="/" replace />
+          }
+        />
+      </Routes>
     </BrowserRouter>
   )
 }

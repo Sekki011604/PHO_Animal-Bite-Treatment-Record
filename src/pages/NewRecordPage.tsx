@@ -79,7 +79,7 @@ export default function NewRecordPage() {
       await blink.db.animalBiteRecords.create(payload)
 
       toast.success('Record saved successfully!')
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       console.error('Failed to save animal bite record:', err)
       const message = err instanceof Error ? err.message : 'Failed to save record. Please try again.'
@@ -94,7 +94,7 @@ export default function NewRecordPage() {
       <div className="executive-panel mb-6 overflow-hidden">
         <div className="border-b border-border/80 px-6 py-5">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="mb-3 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />

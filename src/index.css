@@ -1,0 +1,337 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Lora:ital,wght@0,400..700;1,400..700&family=IBM+Plex+Mono:ital,wght@0,100..700;1,100..700&display=swap');
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Blink UI Theme CSS
+   REQUIRED for @blinkdotnew/ui components to render correctly.
+   BlinkUIProvider adds .theme-{name} + .dark/.light to <html>,
+   activating the matching CSS variable set below.
+   ───────────────────────────────────────────────────────────────────────────── */
+@import '@blinkdotnew/ui/styles';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans), 'Segoe UI', sans-serif;
+    letter-spacing: var(--tracking-normal);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-serif), serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ── App palette (unlayered, after utilities) ─────────────────────────────────
+   Overrides @blinkdotnew/ui theme colors. @layer base loses specificity to UI themes.
+   Dark mode uses :root.dark + .theme-*.dark to match BlinkUIProvider.
+   ⚠️ AGENT MUST REPLACE placeholder values with a custom palette.
+   ──────────────────────────────────────────────────────────────────────────── */
+:root {
+  --background: 210 20% 98%;
+  --foreground: 211 33% 18%;
+  --card: 0 0% 100%;
+  --card-foreground: 211 33% 18%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 211 33% 18%;
+  --primary: 210 63% 28%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 23% 94%;
+  --secondary-foreground: 210 28% 24%;
+  --muted: 210 18% 95%;
+  --muted-foreground: 210 14% 43%;
+  --accent: 196 72% 39%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 210 17% 88%;
+  --input: 210 17% 88%;
+  --ring: 196 72% 39%;
+
+  /* Charts - Professional and harmonious */
+  --chart-1: 210 63% 34%; /* Slightly lighter primary blue */
+  --chart-2: 196 72% 39%; /* Accent Teal/Cyan */
+  --chart-3: 151 46% 34%; /* Professional Green */
+  --chart-4: 35 84% 56%;  /* Subtle Yellow/Gold */
+  --chart-5: 347 68% 45%; /* Contrasting Accent */
+
+  /* Sidebar - Blends with background, primary/accent stand out */
+  --sidebar: 210 22% 97%; /* Matches background */
+  --sidebar-foreground: 211 33% 18%; /* Matches foreground */
+  --sidebar-primary: 210 63% 28%; /* Primary Blue */
+  --sidebar-primary-foreground: 0 0% 100%; /* White */
+  --sidebar-accent: 196 72% 39%; /* Accent Teal/Cyan */
+  --sidebar-accent-foreground: 0 0% 100%; /* White */
+  --sidebar-border: 210 17% 88%; /* Light gray border */
+  --sidebar-ring: 196 72% 39%; /* Matches accent */
+
+  /* Fonts */
+  --font-sans: 'DM Sans', sans-serif;
+  --font-serif: 'Lora', serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Shadows - Refined for depth and professionalism */
+  --shadow-2xs: 0 1px 2px hsl(210 35% 15% / 0.04); /* Very subtle */
+  --shadow-xs: 0 2px 8px hsl(210 35% 15% / 0.05);
+  --shadow-sm: 0 10px 18px hsl(210 35% 15% / 0.06);
+  --shadow: 0 14px 28px hsl(210 35% 15% / 0.08);
+  --shadow-md: 0 18px 36px hsl(210 35% 15% / 0.09); /* Standard card shadow */
+  --shadow-lg: 0 24px 48px hsl(210 35% 15% / 0.12); /* Modal/dialog shadow */
+  --shadow-xl: 0 30px 60px hsl(210 35% 15% / 0.16);
+  --shadow-2xl: 0 36px 70px hsl(210 35% 15% / 0.22); /* Deepest shadow */
+
+  /* Borders and Radii */
+  --radius: 0.9rem; /* Larger radius for a softer, modern look */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+  --radius-full: 9999px;
+
+  --spacing-1: 0.25rem; /* Default spacing unit */
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+
+  --tracking-normal: 0em;
+}
+
+:root.dark,
+.theme-linear.dark,
+.theme-glass.dark,
+.theme-midnight.dark,
+.theme-minimal.dark {
+  /* Dark Mode Palette - Sophisticated and high-contrast */
+  --background: 214 30% 12%; /* Very dark slate */
+  --foreground: 210 18% 92%; /* Light slate gray */
+  --card: 214 28% 15%; /* Dark gray for cards */
+  --card-foreground: 210 18% 92%;
+  --popover: 214 28% 15%;
+  --popover-foreground: 210 18% 92%;
+  --primary: 206 66% 60%; /* Lighter, more vibrant blue for dark mode primary */
+  --primary-foreground: 214 30% 12%; /* Dark background */
+  --secondary: 214 20% 22%; /* Muted dark gray */
+  --secondary-foreground: 210 18% 92%;
+  --muted: 214 20% 20%;
+  --muted-foreground: 210 14% 72%;
+  --accent: 192 70% 58%; /* Lighter, more vibrant accent for dark mode */
+  --accent-foreground: 214 30% 12%;
+  --destructive: 0 72% 58%; /* Standard destructive red */
+  --destructive-foreground: 0 0% 100%; /* White */
+  --border: 214 18% 28%; /* Darker border */
+  --input: 214 18% 28%;
+  --ring: 192 70% 58%; /* Matches dark mode accent */
+
+  /* Charts - Harmonious dark mode */
+  --chart-1: 206 66% 60%; /* Lighter primary blue */
+  --chart-2: 192 70% 58%; /* Accent Teal/Cyan */
+  --chart-3: 151 48% 48%; /* Professional Green */
+  --chart-4: 35 84% 62%;  /* Subtle Yellow/Gold */
+  --chart-5: 347 70% 60%; /* Contrasting Accent */
+
+  /* Sidebar - Dark mode */
+  --sidebar: 214 28% 15%; /* Dark gray */
+  --sidebar-foreground: 210 18% 92%; /* Light slate gray */
+  --sidebar-primary: 206 66% 60%; /* Primary Blue */
+  --sidebar-primary-foreground: 214 30% 12%; /* Dark background */
+  --sidebar-accent: 192 70% 58%; /* Accent Teal/Cyan */
+  --sidebar-accent-foreground: 214 30% 12%;
+  --sidebar-border: 214 18% 28%; /* Darker border */
+  --sidebar-ring: 192 70% 58%; /* Matches dark mode accent */
+}
+
+@layer components {
+  /* Utility classes for premium panels and restrained surfaces */
+  .executive-panel {
+    @apply rounded-3xl border border-border/80 bg-card/95 shadow-md backdrop-blur-sm;
+  }
+
+  .subtle-panel {
+    @apply rounded-2xl border border-border/70 bg-secondary;
+  }
+
+  .page-lead {
+    @apply text-sm text-muted-foreground;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom styles for professional look */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif); /* Use Lora for headings */
+  font-weight: 600; /* Semibold */
+}
+
+.text-muted {
+  color: hsl(var(--muted-foreground));
+}
+
+.bg-muted {
+  background-color: hsl(var(--muted));
+}
+
+.border-muted {
+  border-color: hsl(var(--muted));
+}
+
+.ring-muted {
+  --ring-offset-shadow: var(--ring-offset-shadow), var(--ring-shadow);
+  box-shadow: var(--ring-offset-shadow, 0 0 0 0.2rem var(--ring-color)), var(--ring-shadow, 0 0 0 0.2rem var(--ring-color));
+  /* This specific ring color needs to be set for elements that use it */
+  /* For example, inputs: --ring-color: hsl(var(--muted-foreground)); */
+}
+
+/* Increase default radius for a softer, modern look */
+.rounded-md {
+  border-radius: var(--radius-md); /* 0.5rem */
+}
+
+.rounded-lg {
+  border-radius: var(--radius-lg); /* 0.75rem */
+}
+
+.rounded-xl {
+  border-radius: var(--radius-xl); /* 1rem */
+}
+
+.rounded-2xl {
+  border-radius: var(--radius-2xl); /* 1.5rem */
+}
+
+/* Add subtle texture or gradient for backgrounds if desired */
+/* Example: subtle noise */
+/*
+.bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.1;
+}
+*/
+
+/* Ensure input focus rings are prominent and use the --ring color */
+.focus-ring {
+  outline: none;
+  --tw-focus-ring-offset: 2px; /* Tailwind default */
+  --tw-ring-color: hsl(var(--ring));
+  box-shadow: 0 0 0 var(--tw-ring-width) var(--tw-ring-color) var(--tw-ring-offset-width) var(--tw-ring-offset-shadow, /*var(--ring-offset-shadow, 0 0 transparent)*/);
+}
+
+.focus-ring:focus-visible {
+  --tw-ring-offset-width: var(--tw-focus-ring-offset);
+  --tw-ring-width: 2px; /* Standard ring width */
+}
+
+/* Add any specific element styling here */
+
+/* Example: Improve default button appearance */
+.btn {
+  @apply inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+}
+
+.btn-primary {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+.btn-secondary {
+  @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+}
+
+.btn-outline {
+  @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+}
+
+.btn-ghost {
+  @apply hover:bg-accent hover:text-accent-foreground;
+}
+
+.btn-link {
+  @apply text-primary underline-offset-4 hover:underline;
+}
+
+/* Styles for specific components if needed */
+
+/* Example: Custom card styles */
+.card {
+  @apply rounded-lg shadow-md border border-border; /* Apply default card styling */
+}
+
+.card-header {
+  @apply p-6 pb-0; /* Padding for header */
+}
+
+.card-title {
+  @apply font-serif text-2xl font-semibold; /* Lora for titles */
+}
+
+.card-description {
+  @apply text-muted-foreground;
+}
+
+.card-content {
+  @apply p-6 pt-4; /* Padding for content */
+}
+
+.card-footer {
+  @apply p-6 pt-0; /* Padding for footer */
+}
+
+/* Example: Improved input styling */
+.input-field {
+  @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  :root {
+    /* Adjust spacing and radii for smaller screens if needed */
+    --radius: 0.375rem; /* Slightly smaller radius on mobile */
+    --spacing-4: 0.75rem;
+    --spacing-6: 1.25rem;
+  }
+
+  /* Ensure elements scale appropriately */
+  .card-title {
+    @apply text-xl;
+  }
+}
+
+/* Accessibility: Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -28,6 +28,14 @@ function FormRow({ label, children }: { label: string; children: React.ReactNode
   )
 }
 
+function choiceLabelClass(readOnly = false) {
+  return `pho-choice-label ${readOnly ? 'pho-choice-label-disabled' : 'pho-choice-label-interactive'}`
+}
+
+function choiceTextClass(readOnly = false) {
+  return readOnly ? 'pho-choice-text-disabled' : 'pho-choice-text'
+}
+
 function TextInput({
   value,
   onChange,
@@ -65,15 +73,15 @@ function CheckOption({
   readOnly?: boolean
 }) {
   return (
-    <label className={`flex items-center gap-2 cursor-pointer text-sm ${readOnly ? 'pointer-events-none' : ''}`}>
+    <label className={choiceLabelClass(readOnly)}>
       <input
         type="checkbox"
         checked={checked}
         onChange={e => onChange?.(e.target.checked)}
-        className="w-4 h-4 accent-primary"
-        readOnly={readOnly}
+        className="pho-choice-control"
+        disabled={readOnly}
       />
-      <span>{label}</span>
+      <span className={choiceTextClass(readOnly)}>{label}</span>
     </label>
   )
 }
@@ -246,14 +254,30 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
               <TextInput value={form.contactNumber || ''} onChange={v => set('contactNumber', v)} readOnly={readOnly} />
             </FormRow>
             <div className="flex items-center gap-4 text-sm">
-              <span className="font-medium">Gender</span>
-              <label className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                <input type="radio" name="gender" value="male" checked={form.gender === 'male'} onChange={() => set('gender', 'male')} className="accent-primary" />
-                Male
+              <span className="font-medium text-slate-700">Gender</span>
+              <label className={choiceLabelClass(readOnly)}>
+                <input
+                  type="radio"
+                  name="gender"
+                  value="male"
+                  checked={form.gender === 'male'}
+                  onChange={() => set('gender', 'male')}
+                  className="pho-choice-control"
+                  disabled={readOnly}
+                />
+                <span className={choiceTextClass(readOnly)}>Male</span>
               </label>
-              <label className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                <input type="radio" name="gender" value="female" checked={form.gender === 'female'} onChange={() => set('gender', 'female')} className="accent-primary" />
-                Female
+              <label className={choiceLabelClass(readOnly)}>
+                <input
+                  type="radio"
+                  name="gender"
+                  value="female"
+                  checked={form.gender === 'female'}
+                  onChange={() => set('gender', 'female')}
+                  className="pho-choice-control"
+                  disabled={readOnly}
+                />
+                <span className={choiceTextClass(readOnly)}>Female</span>
               </label>
             </div>
           </div>
@@ -374,16 +398,28 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
           <div className="space-y-3 text-sm">
             {/* Biting Animal */}
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="font-medium">Biting Animal:</span>
+              <span className="font-medium text-slate-700">Biting Animal:</span>
               {['dog', 'cat'].map(animal => (
-                <label key={animal} className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                  <input type="checkbox" checked={form.bitingAnimal === animal} onChange={e => set('bitingAnimal', e.target.checked ? animal : '')} className="accent-primary w-4 h-4" />
-                  <span className="uppercase">{animal}</span>
+                <label key={animal} className={choiceLabelClass(readOnly)}>
+                  <input
+                    type="checkbox"
+                    checked={form.bitingAnimal === animal}
+                    onChange={e => set('bitingAnimal', e.target.checked ? animal : '')}
+                    className="pho-choice-control"
+                    disabled={readOnly}
+                  />
+                  <span className={`${choiceTextClass(readOnly)} uppercase`}>{animal}</span>
                 </label>
               ))}
-              <label className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                <input type="checkbox" checked={form.bitingAnimal === 'others'} onChange={e => set('bitingAnimal', e.target.checked ? 'others' : '')} className="accent-primary w-4 h-4" />
-                OTHERS:
+              <label className={choiceLabelClass(readOnly)}>
+                <input
+                  type="checkbox"
+                  checked={form.bitingAnimal === 'others'}
+                  onChange={e => set('bitingAnimal', e.target.checked ? 'others' : '')}
+                  className="pho-choice-control"
+                  disabled={readOnly}
+                />
+                <span className={`${choiceTextClass(readOnly)} uppercase`}>Others:</span>
               </label>
               {form.bitingAnimal === 'others' && (
                 <TextInput value={form.bitingAnimalOthers || ''} onChange={v => set('bitingAnimalOthers', v)} className="w-24" readOnly={readOnly} />
@@ -392,11 +428,17 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
 
             {/* Ownership */}
             <div className="flex items-center gap-3">
-              <span className="font-medium">Ownership:</span>
+              <span className="font-medium text-slate-700">Ownership:</span>
               {['owned', 'stray'].map(o => (
-                <label key={o} className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                  <input type="checkbox" checked={form.ownership === o} onChange={e => set('ownership', e.target.checked ? o : '')} className="accent-primary w-4 h-4" />
-                  <span className="uppercase">{o}</span>
+                <label key={o} className={choiceLabelClass(readOnly)}>
+                  <input
+                    type="checkbox"
+                    checked={form.ownership === o}
+                    onChange={e => set('ownership', e.target.checked ? o : '')}
+                    className="pho-choice-control"
+                    disabled={readOnly}
+                  />
+                  <span className={`${choiceTextClass(readOnly)} uppercase`}>{o}</span>
                 </label>
               ))}
             </div>
@@ -412,33 +454,51 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
 
             {/* Category */}
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="font-medium">Category:</span>
+              <span className="font-medium text-slate-700">Category:</span>
               {['I', 'II', 'III'].map(cat => (
-                <label key={cat} className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                  <input type="checkbox" checked={form.category === cat} onChange={e => set('category', e.target.checked ? cat : '')} className="accent-primary w-4 h-4" />
-                  {cat}
+                <label key={cat} className={choiceLabelClass(readOnly)}>
+                  <input
+                    type="checkbox"
+                    checked={form.category === cat}
+                    onChange={e => set('category', e.target.checked ? cat : '')}
+                    className="pho-choice-control"
+                    disabled={readOnly}
+                  />
+                  <span className={choiceTextClass(readOnly)}>{cat}</span>
                 </label>
               ))}
             </div>
 
             {/* Circumstance */}
             <div className="flex items-center gap-3">
-              <span className="font-medium">Circumstance:</span>
+              <span className="font-medium text-slate-700">Circumstance:</span>
               {['provoked', 'unprovoked'].map(c => (
-                <label key={c} className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                  <input type="checkbox" checked={form.circumstance === c} onChange={e => set('circumstance', e.target.checked ? c : '')} className="accent-primary w-4 h-4" />
-                  <span className="uppercase">{c}</span>
+                <label key={c} className={choiceLabelClass(readOnly)}>
+                  <input
+                    type="checkbox"
+                    checked={form.circumstance === c}
+                    onChange={e => set('circumstance', e.target.checked ? c : '')}
+                    className="pho-choice-control"
+                    disabled={readOnly}
+                  />
+                  <span className={`${choiceTextClass(readOnly)} uppercase`}>{c}</span>
                 </label>
               ))}
             </div>
 
             {/* Type of Exposure */}
             <div className="flex items-center gap-3">
-              <span className="font-medium">Type of Exposure:</span>
+              <span className="font-medium text-slate-700">Type of Exposure:</span>
               {['bite', 'non_bite'].map(t => (
-                <label key={t} className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                  <input type="checkbox" checked={form.typeOfExposure === t} onChange={e => set('typeOfExposure', e.target.checked ? t : '')} className="accent-primary w-4 h-4" />
-                  <span className="uppercase">{t.replace('_', ' ')}</span>
+                <label key={t} className={choiceLabelClass(readOnly)}>
+                  <input
+                    type="checkbox"
+                    checked={form.typeOfExposure === t}
+                    onChange={e => set('typeOfExposure', e.target.checked ? t : '')}
+                    className="pho-choice-control"
+                    disabled={readOnly}
+                  />
+                  <span className={`${choiceTextClass(readOnly)} uppercase`}>{t.replace('_', ' ')}</span>
                 </label>
               ))}
             </div>
@@ -506,11 +566,17 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="font-medium">Route:</span>
+              <span className="font-medium text-slate-700">Route:</span>
               {['id', 'im'].map(r => (
-                <label key={r} className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                  <input type="checkbox" checked={form.vaccineRoute === r} onChange={e => set('vaccineRoute', e.target.checked ? r : '')} className="accent-primary w-4 h-4" />
-                  <span className="uppercase">{r}</span>
+                <label key={r} className={choiceLabelClass(readOnly)}>
+                  <input
+                    type="checkbox"
+                    checked={form.vaccineRoute === r}
+                    onChange={e => set('vaccineRoute', e.target.checked ? r : '')}
+                    className="pho-choice-control"
+                    disabled={readOnly}
+                  />
+                  <span className={`${choiceTextClass(readOnly)} uppercase`}>{r}</span>
                 </label>
               ))}
             </div>
@@ -540,12 +606,18 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             </div>
 
             <div>
-              <span className="font-medium block mb-1">Status of Animal after Day 14:</span>
+              <span className="font-medium block mb-1 text-slate-700">Status of Animal after Day 14:</span>
               <div className="flex gap-3 ml-2">
                 {['alive', 'dead', 'lost'].map(s => (
-                  <label key={s} className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                    <input type="checkbox" checked={form.animalStatusAfterDay14 === s} onChange={e => set('animalStatusAfterDay14', e.target.checked ? s : '')} className="accent-primary w-4 h-4" />
-                    <span className="uppercase">{s}</span>
+                  <label key={s} className={choiceLabelClass(readOnly)}>
+                    <input
+                      type="checkbox"
+                      checked={form.animalStatusAfterDay14 === s}
+                      onChange={e => set('animalStatusAfterDay14', e.target.checked ? s : '')}
+                      className="pho-choice-control"
+                      disabled={readOnly}
+                    />
+                    <span className={`${choiceTextClass(readOnly)} uppercase`}>{s}</span>
                   </label>
                 ))}
               </div>
@@ -579,11 +651,17 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
         <div className="grid md:grid-cols-2 gap-4 text-sm">
           <div className="space-y-2">
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="font-medium">Type of wound:</span>
+              <span className="font-medium text-slate-700">Type of wound:</span>
               {['clean', 'dirty'].map(t => (
-                <label key={t} className={`flex items-center gap-1 cursor-pointer ${readOnly ? 'pointer-events-none' : ''}`}>
-                  <input type="checkbox" checked={form.tetanusWoundType === t} onChange={e => set('tetanusWoundType', e.target.checked ? t : '')} className="accent-primary w-4 h-4" />
-                  <span className="uppercase">{t}</span>
+                <label key={t} className={choiceLabelClass(readOnly)}>
+                  <input
+                    type="checkbox"
+                    checked={form.tetanusWoundType === t}
+                    onChange={e => set('tetanusWoundType', e.target.checked ? t : '')}
+                    className="pho-choice-control"
+                    disabled={readOnly}
+                  />
+                  <span className={`${choiceTextClass(readOnly)} uppercase`}>{t}</span>
                 </label>
               ))}
             </div>

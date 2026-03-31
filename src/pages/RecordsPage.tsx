@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Download, FilePlus2, Search, Trash2 } from 'lucide-react'
+import { ArrowRight, Download, FilePlus2, LoaderCircle, Search, Trash2, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { AnimalBiteRecord } from '../types'
-import { exportToExcel } from '../lib/excelExport'
 import { toast } from '@blinkdotnew/ui'
 import { mapAnimalBiteRecord } from '../lib/recordMapper'
-import { DATE_FILTER_OPTIONS, DateFilterOption, getDateRange } from '../lib/dateFilters'
+import { generatePHOReport } from '../utils/exportExcel'
+import { parseAnimalBiteImportFile } from '../utils/importExcel'
 
 function Badge({ text, color }: { text: string; color: string }) {
   return (
@@ -27,20 +27,26 @@ export default function RecordsPage() {
   const [records, setRecords] = useState<AnimalBiteRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [dateFilter, setDateFilter] = useState<DateFilterOption>('All Time')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  const fetchRecords = async (activeFilter: DateFilterOption = dateFilter) => {
+  const fetchRecords = async (activeStartDate: string = startDate, activeEndDate: string = endDate) => {
     try {
       setLoading(true)
       let query = supabase
         .from('animal_bite_records')
         .select('*')
 
-      const range = getDateRange(activeFilter)
-      if (range) {
-        query = query.gte('created_at', range.start).lte('created_at', range.end)
+      if (activeStartDate) {
+        query = query.gte('date_of_visit', activeStartDate)
+      }
+
+      if (activeEndDate) {
+        query = query.lte('date_of_visit', activeEndDate)
       }
 
       const { data, error } = await query
@@ -63,8 +69,8 @@ export default function RecordsPage() {
   }
 
   useEffect(() => {
-    fetchRecords(dateFilter)
-  }, [dateFilter])
+    fetchRecords(startDate, endDate)
+  }, [startDate, endDate])
 
   const filtered = records.filter(r => {
     const matchSearch =
@@ -85,12 +91,11 @@ export default function RecordsPage() {
     }
     setExporting(true)
     try {
-      const label = dateFilter
-      exportToExcel(filtered, label)
-      toast.success(`Exported ${filtered.length} records to Excel.`)
+      await generatePHOReport(filtered, startDate, endDate)
+      toast.success(`Exported ${filtered.length} records to the PHO workbook.`)
     } catch (err) {
       console.error(err)
-      toast.error('Export failed.')
+      toast.error('Failed to generate the PHO Excel report.')
     } finally {
       setExporting(false)
     }
@@ -109,9 +114,49 @@ export default function RecordsPage() {
 
       toast.success('Record deleted.')
       setDeleteId(null)
-      fetchRecords(dateFilter)
+      fetchRecords()
     } catch {
       toast.error('Failed to delete record.')
+    }
+  }
+
+  const handleImportClick = () => {
+    if (importing) return
+    fileInputRef.current?.click()
+  }
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file) return
+
+    setImporting(true)
+
+    try {
+      const { records: importedRecords, skippedCount, sheetName } = await parseAnimalBiteImportFile(file)
+
+      for (let index = 0; index < importedRecords.length; index += 200) {
+        const chunk = importedRecords.slice(index, index + 200)
+        const { error } = await supabase
+          .from('animal_bite_records')
+          .insert(chunk)
+
+        if (error) {
+          throw error
+        }
+      }
+
+      await fetchRecords()
+
+      const skippedSuffix = skippedCount > 0 ? ` Skipped ${skippedCount} incomplete row${skippedCount === 1 ? '' : 's'}.` : ''
+      toast.success(`Successfully imported ${importedRecords.length} record${importedRecords.length === 1 ? '' : 's'} from ${sheetName}.${skippedSuffix}`)
+    } catch (error) {
+      console.error(error)
+      const message = error instanceof Error ? error.message : 'Failed to import data from the selected file.'
+      toast.error(message)
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -159,7 +204,7 @@ export default function RecordsPage() {
         </div>
 
         <div className="px-6 py-5">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_220px_auto]">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_auto_auto] xl:items-end">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -170,23 +215,53 @@ export default function RecordsPage() {
                 className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30"
               />
             </div>
-            <select
-              value={dateFilter}
-              onChange={e => setDateFilter(e.target.value as DateFilterOption)}
-              className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
-            >
-              {DATE_FILTER_OPTIONS.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-            <button
-              onClick={handleExport}
-              disabled={exporting || filtered.length === 0}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" />
-              {exporting ? 'Exporting...' : 'Export Excel'}
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <label className="flex min-w-[160px] flex-col gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <span>From</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  max={endDate || undefined}
+                  className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal text-foreground shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+                />
+              </label>
+              <label className="flex min-w-[160px] flex-col gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <span>To</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  min={startDate || undefined}
+                  className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal text-foreground shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+                />
+              </label>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleImportFile}
+                className="hidden"
+              />
+              <button
+                onClick={handleImportClick}
+                disabled={importing || exporting}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {importing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {importing ? 'Importing...' : 'Import Data'}
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting || importing || filtered.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {exporting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {exporting ? 'Generating...' : 'Export Excel'}
+              </button>
+            </div>
           </div>
         </div>
       </section>

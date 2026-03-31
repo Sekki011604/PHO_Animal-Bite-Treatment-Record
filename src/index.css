@@ -190,6 +190,30 @@
   .page-lead {
     @apply text-sm text-muted-foreground;
   }
+
+  .pho-choice-control {
+    @apply h-4 w-4 shrink-0 border-slate-300 accent-emerald-600 text-emerald-600 shadow-sm transition focus:ring-2 focus:ring-emerald-200 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .pho-choice-label {
+    @apply flex items-center gap-2 text-sm select-none;
+  }
+
+  .pho-choice-label-interactive {
+    @apply cursor-pointer text-slate-700;
+  }
+
+  .pho-choice-label-disabled {
+    @apply cursor-default text-slate-400;
+  }
+
+  .pho-choice-text {
+    @apply text-slate-700;
+  }
+
+  .pho-choice-text-disabled {
+    @apply text-slate-400;
+  }
 }
 
 .animate-fade-in {

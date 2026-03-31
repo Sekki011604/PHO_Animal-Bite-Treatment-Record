@@ -4,14 +4,14 @@ import { supabase } from '../lib/supabase'
 import { mapAnimalBiteRecord } from '../lib/recordMapper'
 import { buildBreakdowns, buildDashboardKpis, buildTopBarangays, buildTrend, filterRecords } from '../lib/analytics'
 import { AnimalBiteRecord } from '../types'
-import { DateFilterOption, getDateRange } from '../lib/dateFilters'
 
 export function useAnimalBiteAnalytics() {
-  const [dateFilter, setDateFilter] = useState<DateFilterOption>('All Time')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [search, setSearch] = useState('')
 
   const query = useQuery({
-    queryKey: ['animal-bite-records', dateFilter],
+    queryKey: ['animal-bite-records', startDate, endDate],
     queryFn: async () => {
       let dbQuery = supabase
         .from('animal_bite_records')
@@ -36,9 +36,12 @@ export function useAnimalBiteAnalytics() {
           'created_at',
         ].join(','))
 
-      const range = getDateRange(dateFilter)
-      if (range) {
-        dbQuery = dbQuery.gte('created_at', range.start).lte('created_at', range.end)
+      if (startDate) {
+        dbQuery = dbQuery.gte('date_of_visit', startDate)
+      }
+
+      if (endDate) {
+        dbQuery = dbQuery.lte('date_of_visit', endDate)
       }
 
       const { data, error } = await dbQuery
@@ -61,11 +64,17 @@ export function useAnimalBiteAnalytics() {
 
   return {
     ...query,
-    dateFilter,
+    startDate,
+    endDate,
     search,
-    setDateFilter,
+    setStartDate,
+    setEndDate,
     setSearch,
-    resetFilters: () => { setDateFilter('All Time'); setSearch('') },
+    resetFilters: () => {
+      setStartDate('')
+      setEndDate('')
+      setSearch('')
+    },
     records: query.data || [],
     filtered,
     kpis,

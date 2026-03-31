@@ -3,12 +3,13 @@ import { Download, Printer, RefreshCcw } from 'lucide-react'
 import { useAnimalBiteAnalytics } from '../hooks/useAnimalBiteAnalytics'
 import { AnalyticsOverview } from '../features/analytics/components/AnalyticsOverview'
 import { exportToExcel } from '../lib/excelExport'
+import { DATE_FILTER_OPTIONS } from '../lib/dateFilters'
 
 export default function AnalyticsPage() {
-  const { isLoading, filtered, kpis, trend, category, animal, age, topBarangays, month, search, setMonth, setSearch, resetFilters } = useAnimalBiteAnalytics()
+  const { isLoading, filtered, kpis, trend, category, animal, age, topBarangays, dateFilter, search, setDateFilter, setSearch, resetFilters } = useAnimalBiteAnalytics()
 
   const exportFiltered = () => {
-    const label = month || 'all-records'
+    const label = dateFilter.toLowerCase().replace(/\s+/g, '-')
     exportToExcel(filtered, label)
   }
 
@@ -29,11 +30,19 @@ export default function AnalyticsPage() {
         <div className="executive-panel mb-6 p-5">
           <div className="mb-4">
             <div className="text-sm font-semibold text-foreground">Filter analytics</div>
-            <div className="page-lead mt-1">Refine reporting views by month or locate a patient, address, registration number, or physician.</div>
+            <div className="page-lead mt-1">Refine reporting by date range or locate a patient, municipality, barangay, registration number, or physician.</div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr_auto] gap-3">
-            <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30" />
-            <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by patient, address, registration number, physician..." />
+          <div className="grid grid-cols-1 md:grid-cols-[220px_1fr_auto] gap-3">
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value as (typeof DATE_FILTER_OPTIONS)[number])}
+              className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+            >
+              {DATE_FILTER_OPTIONS.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+            <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by patient, municipality, barangay, registration number, physician..." />
             <Button variant="outline" onClick={resetFilters}><RefreshCcw className="mr-2 h-4 w-4" />Reset</Button>
           </div>
         </div>

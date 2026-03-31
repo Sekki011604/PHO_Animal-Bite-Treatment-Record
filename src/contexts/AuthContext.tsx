@@ -7,6 +7,7 @@ export type UserRole = 'admin' | 'staff' | null
 type AuthContextValue = {
   session: Session | null
   user: User | null
+  fullName: string
   role: UserRole
   loading: boolean
   signOut: () => Promise<void>
@@ -37,9 +38,31 @@ async function getRoleForUser(user: User | null): Promise<UserRole> {
   return normalizeRole(user.user_metadata?.role)
 }
 
+async function getFullNameForUser(user: User | null): Promise<string> {
+  if (!user) return ''
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .maybeSingle<{ full_name: string | null }>()
+
+  if (!error && data?.full_name) {
+    return data.full_name
+  }
+
+  const metaName = user.user_metadata?.full_name
+  if (typeof metaName === 'string' && metaName.trim()) {
+    return metaName.trim()
+  }
+
+  return user.email || ''
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
+  const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<UserRole>(null)
   const [loading, setLoading] = useState(true)
 
@@ -65,7 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setSession(nextSession)
       setUser(nextUser)
-      setRole(await getRoleForUser(nextUser))
+      const [nextRole, nextFullName] = await Promise.all([
+        getRoleForUser(nextUser),
+        getFullNameForUser(nextUser),
+      ])
+      setRole(nextRole)
+      setFullName(nextFullName)
       lastSessionId = nextSessionId
     }
 
@@ -103,17 +131,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut()
     setSession(null)
     setUser(null)
+    setFullName('')
     setRole(null)
   }
 
   const value = useMemo<AuthContextValue>(() => ({
     session,
     user,
+    fullName,
     role,
     loading,
     signOut,
     refreshRole,
-  }), [session, user, role, loading])
+  }), [session, user, fullName, role, loading])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

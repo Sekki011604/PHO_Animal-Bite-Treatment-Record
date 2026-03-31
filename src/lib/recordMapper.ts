@@ -27,6 +27,8 @@ export function mapAnimalBiteRecord(r: Record<string, unknown>): AnimalBiteRecor
     registrationNumber: asText(pick(r, 'registrationNumber', 'registration_number')),
     dateOfVisit: asText(pick(r, 'dateOfVisit', 'date_of_visit')),
     fullName: asText(pick(r, 'fullName', 'full_name')),
+    municipality: asText(pick(r, 'municipality')),
+    barangay: asText(pick(r, 'barangay')),
     address: asText(pick(r, 'address')),
     contactNumber: asText(pick(r, 'contactNumber', 'contact_number')),
     age: asText(pick(r, 'age')),

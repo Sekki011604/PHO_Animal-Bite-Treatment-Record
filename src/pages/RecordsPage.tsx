@@ -6,6 +6,7 @@ import { AnimalBiteRecord } from '../types'
 import { exportToExcel } from '../lib/excelExport'
 import { toast } from '@blinkdotnew/ui'
 import { mapAnimalBiteRecord } from '../lib/recordMapper'
+import { DATE_FILTER_OPTIONS, DateFilterOption, getDateRange } from '../lib/dateFilters'
 
 function Badge({ text, color }: { text: string; color: string }) {
   return (
@@ -26,16 +27,23 @@ export default function RecordsPage() {
   const [records, setRecords] = useState<AnimalBiteRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [monthFilter, setMonthFilter] = useState('')
+  const [dateFilter, setDateFilter] = useState<DateFilterOption>('All Time')
   const [exporting, setExporting] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
-  const fetchRecords = async () => {
+  const fetchRecords = async (activeFilter: DateFilterOption = dateFilter) => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      let query = supabase
         .from('animal_bite_records')
         .select('*')
+
+      const range = getDateRange(activeFilter)
+      if (range) {
+        query = query.gte('created_at', range.start).lte('created_at', range.end)
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(500)
 
@@ -55,20 +63,19 @@ export default function RecordsPage() {
   }
 
   useEffect(() => {
-    fetchRecords()
-  }, [])
+    fetchRecords(dateFilter)
+  }, [dateFilter])
 
   const filtered = records.filter(r => {
     const matchSearch =
       !search ||
       r.fullName?.toLowerCase().includes(search.toLowerCase()) ||
       r.registrationNumber?.toLowerCase().includes(search.toLowerCase()) ||
-      r.address?.toLowerCase().includes(search.toLowerCase())
+      r.address?.toLowerCase().includes(search.toLowerCase()) ||
+      r.municipality?.toLowerCase().includes(search.toLowerCase()) ||
+      r.barangay?.toLowerCase().includes(search.toLowerCase())
 
-    const matchMonth =
-      !monthFilter || (r.dateOfVisit || '').startsWith(monthFilter)
-
-    return matchSearch && matchMonth
+    return matchSearch
   })
 
   const handleExport = async () => {
@@ -78,9 +85,7 @@ export default function RecordsPage() {
     }
     setExporting(true)
     try {
-      const label = monthFilter
-        ? new Date(monthFilter + '-01').toLocaleString('en-US', { month: 'long', year: 'numeric' })
-        : 'All Records'
+      const label = dateFilter
       exportToExcel(filtered, label)
       toast.success(`Exported ${filtered.length} records to Excel.`)
     } catch (err) {
@@ -104,7 +109,7 @@ export default function RecordsPage() {
 
       toast.success('Record deleted.')
       setDeleteId(null)
-      fetchRecords()
+      fetchRecords(dateFilter)
     } catch {
       toast.error('Failed to delete record.')
     }
@@ -154,7 +159,7 @@ export default function RecordsPage() {
         </div>
 
         <div className="px-6 py-5">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_190px_auto]">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_220px_auto]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -165,12 +170,15 @@ export default function RecordsPage() {
                 className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30"
               />
             </div>
-            <input
-              type="month"
-              value={monthFilter}
-              onChange={e => setMonthFilter(e.target.value)}
-              className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30"
-            />
+            <select
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value as DateFilterOption)}
+              className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+            >
+              {DATE_FILTER_OPTIONS.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
             <button
               onClick={handleExport}
               disabled={exporting || filtered.length === 0}

@@ -3,6 +3,8 @@ export interface AnimalBiteRecord {
   registrationNumber?: string
   dateOfVisit?: string
   fullName: string
+  municipality?: string
+  barangay?: string
   address?: string
   contactNumber?: string
   /** Display string e.g. "3 yrs" or "8 mos" — auto-computed from dateOfBirth */

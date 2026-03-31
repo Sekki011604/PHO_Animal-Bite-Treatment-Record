@@ -7,12 +7,11 @@ export type DashboardKpi = { label: string; value: string; hint: string }
 const inc = (map: Record<string, number>, key: string) => { map[key] = (map[key] || 0) + 1 }
 const sortCounts = (map: Record<string, number>) => Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
 
-export function filterRecords(records: AnimalBiteRecord[], month: string, search: string) {
+export function filterRecords(records: AnimalBiteRecord[], search: string) {
   return records.filter((r) => {
-    const matchesMonth = !month || (r.dateOfVisit || '').startsWith(month)
-    const hay = `${r.fullName} ${r.registrationNumber} ${r.address} ${r.physicianCharge}`.toLowerCase()
+    const hay = `${r.fullName} ${r.registrationNumber} ${r.address} ${r.barangay} ${r.municipality} ${r.physicianCharge}`.toLowerCase()
     const matchesSearch = !search || hay.includes(search.toLowerCase())
-    return matchesMonth && matchesSearch
+    return matchesSearch
   })
 }
 
@@ -64,8 +63,7 @@ export function buildBreakdowns(records: AnimalBiteRecord[]) {
 export function buildTopBarangays(records: AnimalBiteRecord[], limit = 8): CountDatum[] {
   const counts: Record<string, number> = {}
   records.forEach((r) => {
-    const parts = (r.address || '').split(',').map((p) => p.trim()).filter(Boolean)
-    const barangay = parts.find((p) => /^brgy\.?/i.test(p)) || parts[0] || 'Unknown'
+    const barangay = (r.barangay || '').trim() || 'Unknown'
     inc(counts, barangay)
   })
   return sortCounts(counts).slice(0, limit)

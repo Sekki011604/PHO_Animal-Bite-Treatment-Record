@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck, Menu, X, UserPlus2, LogOut, Settings2 } from 'lucide-react'
+import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck, Menu, X, UserPlus2, LogOut, Settings2, ChevronDown } from 'lucide-react'
 import RecordsPage from './pages/RecordsPage'
 import NewRecordPage from './pages/NewRecordPage'
 import ViewRecordPage from './pages/ViewRecordPage'
@@ -54,10 +54,33 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-function SidebarLayout({ userRole, onLogout }: { userRole: Exclude<UserRole, null>; onLogout: () => Promise<void> }) {
+function SidebarLayout({
+  userRole,
+  fullName,
+  onLogout,
+}: {
+  userRole: Exclude<UserRole, null>
+  fullName: string
+  onLogout: () => Promise<void>
+}) {
   const location = useLocation()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+
+  const displayName = useMemo(() => {
+    if (fullName.trim()) return fullName.trim()
+    return 'User'
+  }, [fullName])
+
+  const roleLabel = userRole === 'admin' ? 'Admin' : 'Staff'
+
+  const initials = useMemo(() => {
+    const words = displayName.split(' ').filter(Boolean)
+    if (words.length === 0) return 'U'
+    if (words.length === 1) return words[0].slice(0, 1).toUpperCase()
+    return (words[0][0] + words[1][0]).toUpperCase()
+  }, [displayName])
 
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -173,13 +196,42 @@ function SidebarLayout({ userRole, onLogout }: { userRole: Exclude<UserRole, nul
               <div className="mt-1 hidden text-sm text-muted-foreground lg:block">Manage digital animal bite treatment records, reporting, and analytics.</div>
               </div>
             </div>
-            <button
-              onClick={() => navigate('/new')}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-md transition hover:translate-y-[-1px] hover:bg-[hsl(var(--primary)/0.92)]"
-            >
-              <FilePlus2 className="h-4 w-4" />
-              New Record
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsProfileMenuOpen(prev => !prev)}
+                className="inline-flex items-center gap-3 rounded-xl border border-border bg-white px-3 py-2 text-left shadow-sm transition hover:bg-secondary"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                  {initials}
+                </span>
+                <span className="hidden sm:block">
+                  <span className="block text-sm font-semibold text-foreground leading-tight">{displayName}</span>
+                  <span className="block text-xs text-accent leading-tight">{roleLabel}</span>
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              {isProfileMenuOpen && (
+                <div className="absolute right-0 mt-2 w-52 rounded-xl border border-border bg-white p-2 shadow-md">
+                  <div className="mb-1 rounded-lg bg-secondary/40 px-3 py-2">
+                    <div className="text-sm font-semibold text-foreground">{displayName}</div>
+                    <div className="text-xs text-accent">{roleLabel}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false)
+                      void onLogout().then(() => navigate('/login', { replace: true }))
+                    }}
+                    className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-primary transition hover:bg-secondary"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex border-t border-border/60 bg-card/70 px-2 py-2 lg:hidden">
             {navItems.map(item => (
@@ -214,7 +266,7 @@ function SidebarLayout({ userRole, onLogout }: { userRole: Exclude<UserRole, nul
 }
 
 function AppRoutes() {
-  const { user, role, loading, signOut } = useAuth()
+  const { user, role, fullName, loading, signOut } = useAuth()
 
   const handleLogout = async () => {
     await signOut()
@@ -232,7 +284,7 @@ function AppRoutes() {
         path="/*"
         element={
           <ProtectedRoute>
-            <SidebarLayout userRole={role === 'admin' ? 'admin' : 'staff'} onLogout={handleLogout} />
+            <SidebarLayout userRole={role === 'admin' ? 'admin' : 'staff'} fullName={fullName} onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />

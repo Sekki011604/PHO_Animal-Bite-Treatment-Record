@@ -18,6 +18,8 @@ export default function NewRecordPage() {
         registration_number: data.registrationNumber || '',
         date_of_visit: data.dateOfVisit || now.slice(0, 10),
         full_name: data.fullName.trim(),
+        municipality: data.municipality || '',
+        barangay: data.barangay || '',
         address: data.address || '',
         contact_number: data.contactNumber || '',
         age: data.age || '',
@@ -73,6 +75,8 @@ export default function NewRecordPage() {
         created_at: now,
         updated_at: now,
       }
+
+      console.log('Submitting payload:', payload)
 
       const { error } = await supabase
         .from('animal_bite_records')

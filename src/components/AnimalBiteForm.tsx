@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { AnimalBiteRecord, dobToAgeInMonths, formatAge } from '../types'
+import { municipalities, municipalityBarangayMap } from '../lib/municipalityBarangayMap'
 
 interface Props {
   onSubmit: (data: Omit<AnimalBiteRecord, 'id' | 'createdAt' | 'updatedAt'>) => void
@@ -86,6 +87,8 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
     registrationNumber: initialData.registrationNumber || '',
     dateOfVisit: initialData.dateOfVisit || today,
     fullName: initialData.fullName || '',
+    municipality: initialData.municipality || '',
+    barangay: initialData.barangay || '',
     address: initialData.address || '',
     contactNumber: initialData.contactNumber || '',
     age: initialData.age || '',
@@ -155,13 +158,32 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
 
   const set = (key: keyof FormData, value: string | boolean | number | undefined) => {
     if (readOnly) return
+
+    if (key === 'municipality') {
+      setForm(prev => ({ ...prev, municipality: String(value || ''), barangay: '' }))
+      return
+    }
+
     setForm(prev => ({ ...prev, [key]: value }))
   }
+
+  const availableBarangays = useMemo(() => {
+    if (!form.municipality) return []
+    return municipalityBarangayMap[form.municipality] || []
+  }, [form.municipality])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.fullName.trim()) {
       alert('Full name is required.')
+      return
+    }
+    if (!form.municipality) {
+      alert('Municipality is required.')
+      return
+    }
+    if (!form.barangay) {
+      alert('Barangay is required.')
       return
     }
     onSubmit(form)
@@ -192,8 +214,33 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <FormRow label="Full Name">
               <TextInput value={form.fullName} onChange={v => set('fullName', v)} readOnly={readOnly} />
             </FormRow>
-            <FormRow label="Address">
-              <TextInput value={form.address || ''} onChange={v => set('address', v)} readOnly={readOnly} />
+            <FormRow label="Municipality">
+              <select
+                required
+                disabled={readOnly}
+                value={form.municipality || ''}
+                onChange={e => set('municipality', e.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:bg-secondary/30"
+              >
+                <option value="">Select Municipality</option>
+                {municipalities.map(municipality => (
+                  <option key={municipality} value={municipality}>{municipality}</option>
+                ))}
+              </select>
+            </FormRow>
+            <FormRow label="Barangay">
+              <select
+                required
+                disabled={readOnly || !form.municipality}
+                value={form.barangay || ''}
+                onChange={e => set('barangay', e.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:bg-secondary/30"
+              >
+                <option value="">{form.municipality ? 'Select Barangay' : 'Select Municipality first'}</option>
+                {availableBarangays.map(barangay => (
+                  <option key={barangay} value={barangay}>{barangay}</option>
+                ))}
+              </select>
             </FormRow>
             <FormRow label="Contact Number">
               <TextInput value={form.contactNumber || ''} onChange={v => set('contactNumber', v)} readOnly={readOnly} />

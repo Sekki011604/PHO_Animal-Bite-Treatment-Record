@@ -1,13 +1,58 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck, Menu, X, UserPlus2, LogOut } from 'lucide-react'
+import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck, Menu, X, UserPlus2, LogOut, Settings2 } from 'lucide-react'
 import RecordsPage from './pages/RecordsPage'
 import NewRecordPage from './pages/NewRecordPage'
 import ViewRecordPage from './pages/ViewRecordPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import LoginPage from './pages/LoginPage'
 import CreateStaffPage from './pages/CreateStaffPage'
+import SystemMaintenancePage from './pages/SystemMaintenancePage'
 import { useAuth, type UserRole } from './contexts/AuthContext'
+
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-white text-text-darkgreen">
+      <div className="mr-3 h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+      Loading PHO System...
+    </div>
+  )
+}
+
+function LoginRoute() {
+  const { user, loading } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [loading, user, navigate])
+
+  if (loading) {
+    return <LoadingScreen />
+  }
+
+  if (user) {
+    return <LoadingScreen />
+  }
+
+  return <LoginPage />
+}
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <LoadingScreen />
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
 
 function SidebarLayout({ userRole, onLogout }: { userRole: Exclude<UserRole, null>; onLogout: () => Promise<void> }) {
   const location = useLocation()
@@ -18,7 +63,12 @@ function SidebarLayout({ userRole, onLogout }: { userRole: Exclude<UserRole, nul
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/new', label: 'Data Entry', icon: FilePlus2 },
     { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-    ...(userRole === 'admin' ? [{ to: '/admin/create-staff', label: 'Manage Staff', icon: UserPlus2 }] : []),
+    ...(userRole === 'admin'
+      ? [
+          { to: '/admin/create-staff', label: 'Manage Staff', icon: UserPlus2 },
+          { to: '/admin/system-maintenance', label: 'System Maintenance', icon: Settings2 },
+        ]
+      : []),
   ]
 
   return (
@@ -84,7 +134,7 @@ function SidebarLayout({ userRole, onLogout }: { userRole: Exclude<UserRole, nul
             type="button"
             onClick={() => {
               setIsSidebarOpen(false)
-              void onLogout().then(() => navigate('/'))
+              void onLogout().then(() => navigate('/login', { replace: true }))
             }}
             className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-secondary"
           >
@@ -154,6 +204,7 @@ function SidebarLayout({ userRole, onLogout }: { userRole: Exclude<UserRole, nul
             <Route path="/record/:id" element={<ViewRecordPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/admin/create-staff" element={userRole === 'admin' ? <CreateStaffPage /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/admin/system-maintenance" element={userRole === 'admin' ? <SystemMaintenancePage /> : <Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
@@ -162,7 +213,7 @@ function SidebarLayout({ userRole, onLogout }: { userRole: Exclude<UserRole, nul
   )
 }
 
-export default function App() {
+function AppRoutes() {
   const { user, role, loading, signOut } = useAuth()
 
   const handleLogout = async () => {
@@ -170,36 +221,29 @@ export default function App() {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white text-text-darkgreen">
-        <div className="mr-3 h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-        Loading session...
-      </div>
-    )
+    return <LoadingScreen />
   }
 
-  const isAuthenticated = Boolean(user)
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
+      <Route path="/login" element={<LoginRoute />} />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <SidebarLayout userRole={role === 'admin' ? 'admin' : 'staff'} onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  )
+}
 
+export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            isAuthenticated
-              ? <Navigate to="/dashboard" replace />
-              : <LoginPage />
-          }
-        />
-        <Route
-          path="/*"
-          element={
-            isAuthenticated && role
-              ? <SidebarLayout userRole={role} onLogout={handleLogout} />
-              : <Navigate to="/" replace />
-          }
-        />
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   )
 }

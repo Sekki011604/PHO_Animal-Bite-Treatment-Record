@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Download, FilePlus2, Search, Trash2 } from 'lucide-react'
-import { blink } from '../lib/blink'
+import { supabase } from '../lib/supabase'
 import { AnimalBiteRecord } from '../types'
 import { exportToExcel } from '../lib/excelExport'
 import { toast } from '@blinkdotnew/ui'
+import { mapAnimalBiteRecord } from '../lib/recordMapper'
 
 function Badge({ text, color }: { text: string; color: string }) {
   return (
@@ -32,71 +33,17 @@ export default function RecordsPage() {
   const fetchRecords = async () => {
     try {
       setLoading(true)
-      const raw = await blink.db.animalBiteRecords.list({
-        orderBy: { createdAt: 'desc' },
-        limit: 500,
-      })
+      const { data, error } = await supabase
+        .from('animal_bite_records')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500)
 
-      const mapped: AnimalBiteRecord[] = (raw as Record<string, unknown>[]).map((r) => ({
-        id: r['id'] as string,
-        registrationNumber: r['registrationNumber'] as string,
-        dateOfVisit: r['dateOfVisit'] as string,
-        fullName: r['fullName'] as string,
-        address: r['address'] as string,
-        contactNumber: r['contactNumber'] as string,
-        age: r['age'] as string,
-        gender: r['gender'] as string,
-        dateOfBirth: r['dateOfBirth'] as string,
-        philhealthMember: r['philhealthMember'] as string,
-        philhealthNumber: r['philhealthNumber'] as string,
-        allergies: r['allergies'] as string,
-        immunocompromisedStatus: r['immunocompromisedStatus'] as string,
-        specifyIllness: r['specifyIllness'] as string,
-        intakeSteroidsChloroquine: Number(r['intakeSteroidsChloroquine']) > 0,
-        bp: r['bp'] as string,
-        hr: r['hr'] as string,
-        rr: r['rr'] as string,
-        temp: r['temp'] as string,
-        patientWeight: r['patientWeight'] as string,
-        bitingAnimal: r['bitingAnimal'] as string,
-        bitingAnimalOthers: r['bitingAnimalOthers'] as string,
-        ownership: r['ownership'] as string,
-        antiRabiesVaccination: r['antiRabiesVaccination'] as string,
-        category: r['category'] as string,
-        circumstance: r['circumstance'] as string,
-        typeOfExposure: r['typeOfExposure'] as string,
-        dateOfExposure: r['dateOfExposure'] as string,
-        placeOfExposure: r['placeOfExposure'] as string,
-        humanArvStatus: r['humanArvStatus'] as string,
-        dateLastVaccination: r['dateLastVaccination'] as string,
-        biteSiteNotes: r['biteSiteNotes'] as string,
-        washingBiteWound: Number(r['washingBiteWound']) > 0,
-        fullRegimen: Number(r['fullRegimen']) > 0,
-        booster: Number(r['booster']) > 0,
-        vaccineGenericName: r['vaccineGenericName'] as string,
-        vaccineBrandName: r['vaccineBrandName'] as string,
-        vaccineRoute: r['vaccineRoute'] as string,
-        day0: r['day0'] as string,
-        day3: r['day3'] as string,
-        day7: r['day7'] as string,
-        day14: r['day14'] as string,
-        day2128: r['day2128'] as string,
-        ageInMonths: r['ageInMonths'] != null ? Number(r['ageInMonths']) : undefined,
-        animalStatusAfterDay14: r['animalStatusAfterDay14'] as string,
-        erigHrigComputedDose: r['erigHrigComputedDose'] as string,
-        erigHrigActualDose: r['erigHrigActualDose'] as string,
-        erigHrigDateGiven: r['erigHrigDateGiven'] as string,
-        tetanusWoundType: r['tetanusWoundType'] as string,
-        tetanusDateLast: r['tetanusDateLast'] as string,
-        tetanusToxoid: r['tetanusToxoid'] as string,
-        ats: r['ats'] as string,
-        diagnosisNotes: r['diagnosisNotes'] as string,
-        progressNotes: r['progressNotes'] as string,
-        nurseInCharge: r['nurseInCharge'] as string,
-        physicianCharge: r['physicianCharge'] as string,
-        createdAt: r['createdAt'] as string,
-        updatedAt: r['updatedAt'] as string,
-      }))
+      if (error) {
+        throw error
+      }
+
+      const mapped: AnimalBiteRecord[] = ((data || []) as Record<string, unknown>[]).map(mapAnimalBiteRecord)
 
       setRecords(mapped)
     } catch (err) {
@@ -146,7 +93,15 @@ export default function RecordsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await blink.db.animalBiteRecords.delete(id)
+      const { error } = await supabase
+        .from('animal_bite_records')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        throw error
+      }
+
       toast.success('Record deleted.')
       setDeleteId(null)
       fetchRecords()

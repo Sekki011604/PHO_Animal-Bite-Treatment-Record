@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@blinkdotnew/ui'
 import { ArrowLeft, FilePlus2 } from 'lucide-react'
-import { blink } from '../lib/blink'
+import { supabase } from '../lib/supabase'
 import { AnimalBiteRecord } from '../types'
 import AnimalBiteForm from '../components/AnimalBiteForm'
 
@@ -13,70 +13,74 @@ export default function NewRecordPage() {
   const handleSubmit = async (data: Omit<AnimalBiteRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
     setSaving(true)
     try {
-      const id = `abr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
       const now = new Date().toISOString()
       const payload = {
-        id,
-        registrationNumber: data.registrationNumber || '',
-        dateOfVisit: data.dateOfVisit || now.slice(0, 10),
-        fullName: data.fullName.trim(),
+        registration_number: data.registrationNumber || '',
+        date_of_visit: data.dateOfVisit || now.slice(0, 10),
+        full_name: data.fullName.trim(),
         address: data.address || '',
-        contactNumber: data.contactNumber || '',
+        contact_number: data.contactNumber || '',
         age: data.age || '',
-        ageInMonths: data.ageInMonths == null ? null : String(data.ageInMonths),
+        age_in_months: data.ageInMonths == null ? null : data.ageInMonths,
         gender: data.gender || '',
-        dateOfBirth: data.dateOfBirth || '',
-        philhealthMember: data.philhealthMember || '',
-        philhealthNumber: data.philhealthNumber || '',
+        date_of_birth: data.dateOfBirth || null,
+        philhealth_member: data.philhealthMember || '',
+        philhealth_number: data.philhealthNumber || '',
         allergies: data.allergies || '',
-        immunocompromisedStatus: data.immunocompromisedStatus || '',
-        specifyIllness: data.specifyIllness || '',
-        intakeSteroidsChloroquine: data.intakeSteroidsChloroquine ? '1' : '0',
+        immunocompromised_status: data.immunocompromisedStatus || '',
+        specify_illness: data.specifyIllness || '',
+        intake_steroids_chloroquine: !!data.intakeSteroidsChloroquine,
         bp: data.bp || '',
         hr: data.hr || '',
         rr: data.rr || '',
         temp: data.temp || '',
-        patientWeight: data.patientWeight || '',
-        bitingAnimal: data.bitingAnimal || '',
-        bitingAnimalOthers: data.bitingAnimalOthers || '',
+        patient_weight: data.patientWeight || '',
+        biting_animal: data.bitingAnimal || '',
+        biting_animal_others: data.bitingAnimalOthers || '',
         ownership: data.ownership || '',
-        antiRabiesVaccination: data.antiRabiesVaccination || '',
+        anti_rabies_vaccination: data.antiRabiesVaccination || '',
         category: data.category || '',
         circumstance: data.circumstance || '',
-        typeOfExposure: data.typeOfExposure || '',
-        dateOfExposure: data.dateOfExposure || '',
-        placeOfExposure: data.placeOfExposure || '',
-        humanArvStatus: data.humanArvStatus || '',
-        dateLastVaccination: data.dateLastVaccination || '',
-        biteSiteNotes: data.biteSiteNotes || '',
-        washingBiteWound: data.washingBiteWound ? '1' : '0',
-        fullRegimen: data.fullRegimen ? '1' : '0',
-        booster: data.booster ? '1' : '0',
-        vaccineGenericName: data.vaccineGenericName || '',
-        vaccineBrandName: data.vaccineBrandName || '',
-        vaccineRoute: data.vaccineRoute || '',
-        day0: data.day0 || '',
-        day3: data.day3 || '',
-        day7: data.day7 || '',
-        day14: data.day14 || '',
-        day2128: data.day2128 || '',
-        animalStatusAfterDay14: data.animalStatusAfterDay14 || '',
-        erigHrigComputedDose: data.erigHrigComputedDose || '',
-        erigHrigActualDose: data.erigHrigActualDose || '',
-        erigHrigDateGiven: data.erigHrigDateGiven || '',
-        tetanusWoundType: data.tetanusWoundType || '',
-        tetanusDateLast: data.tetanusDateLast || '',
-        tetanusToxoid: data.tetanusToxoid || '',
+        type_of_exposure: data.typeOfExposure || '',
+        date_of_exposure: data.dateOfExposure || null,
+        place_of_exposure: data.placeOfExposure || '',
+        human_arv_status: data.humanArvStatus || '',
+        date_last_vaccination: data.dateLastVaccination || null,
+        bite_site_notes: data.biteSiteNotes || '',
+        washing_bite_wound: !!data.washingBiteWound,
+        full_regimen: !!data.fullRegimen,
+        booster: !!data.booster,
+        vaccine_generic_name: data.vaccineGenericName || '',
+        vaccine_brand_name: data.vaccineBrandName || '',
+        vaccine_route: data.vaccineRoute || '',
+        day0: data.day0 || null,
+        day3: data.day3 || null,
+        day7: data.day7 || null,
+        day14: data.day14 || null,
+        day2128: data.day2128 || null,
+        animal_status_after_day14: data.animalStatusAfterDay14 || '',
+        erig_hrig_computed_dose: data.erigHrigComputedDose || '',
+        erig_hrig_actual_dose: data.erigHrigActualDose || '',
+        erig_hrig_date_given: data.erigHrigDateGiven || null,
+        tetanus_wound_type: data.tetanusWoundType || '',
+        tetanus_date_last: data.tetanusDateLast || null,
+        tetanus_toxoid: data.tetanusToxoid || '',
         ats: data.ats || '',
-        diagnosisNotes: data.diagnosisNotes || '',
-        progressNotes: data.progressNotes || '',
-        nurseInCharge: data.nurseInCharge || '',
-        physicianCharge: data.physicianCharge || '',
-        createdAt: now,
-        updatedAt: now,
+        diagnosis_notes: data.diagnosisNotes || '',
+        progress_notes: data.progressNotes || '',
+        nurse_in_charge: data.nurseInCharge || '',
+        physician_charge: data.physicianCharge || '',
+        created_at: now,
+        updated_at: now,
       }
 
-      await blink.db.animalBiteRecords.create(payload)
+      const { error } = await supabase
+        .from('animal_bite_records')
+        .insert(payload)
+
+      if (error) {
+        throw error
+      }
 
       toast.success('Record saved successfully!')
       navigate('/dashboard')

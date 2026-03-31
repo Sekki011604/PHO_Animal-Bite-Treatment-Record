@@ -20,19 +20,6 @@ function normalizeRole(value: string | null | undefined): UserRole {
   return null
 }
 
-function fallbackRole(user: User | null): UserRole {
-  if (!user) return null
-
-  const metadataRole = normalizeRole(user.user_metadata?.role)
-  if (metadataRole) return metadataRole
-
-  if ((user.email || '').toLowerCase() === 'admin@pho.gov') {
-    return 'admin'
-  }
-
-  return 'staff'
-}
-
 async function getRoleForUser(user: User | null): Promise<UserRole> {
   if (!user) return null
 
@@ -47,7 +34,7 @@ async function getRoleForUser(user: User | null): Promise<UserRole> {
     if (dbRole) return dbRole
   }
 
-  return fallbackRole(user)
+  return normalizeRole(user.user_metadata?.role)
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -63,28 +50,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true
+    let initialized = false
+    let lastSessionId: string | null = null
 
-    const bootstrap = async () => {
-      const { data } = await supabase.auth.getSession()
+    const applyAuthState = async (nextSession: Session | null) => {
       if (!isMounted) return
 
-      const nextSession = data.session
       const nextUser = nextSession?.user ?? null
+      const nextSessionId = nextSession?.access_token ?? null
+
+      if (initialized && lastSessionId === nextSessionId) {
+        return
+      }
 
       setSession(nextSession)
       setUser(nextUser)
       setRole(await getRoleForUser(nextUser))
-      setLoading(false)
+      lastSessionId = nextSessionId
+    }
+
+    const bootstrap = async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        await applyAuthState(data.session)
+      } finally {
+        initialized = true
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
     }
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       if (!isMounted) return
+      await applyAuthState(nextSession)
 
-      const nextUser = nextSession?.user ?? null
-      setSession(nextSession)
-      setUser(nextUser)
-      setRole(await getRoleForUser(nextUser))
-      setLoading(false)
+      // Keep loading true until bootstrap finishes the initial session+role resolution.
+      if (initialized && isMounted) {
+        setLoading(false)
+      }
     })
 
     void bootstrap()

@@ -149,7 +149,6 @@ function buildReportRows(records: AnimalBiteRecord[]) {
     const ownership = normalizeText(record.ownership)
     const bitingAnimal = normalizeText(record.bitingAnimal)
     const isBooster = Boolean(record.booster)
-    const hasRig = hasRigDose(record)
     const hasAnyPep = hasAnyPepTreatment(record)
     const hasCompletedPep = hasCompletedPepTreatment(record)
     const ageInMonths = resolveAgeInMonths(record)
@@ -188,10 +187,13 @@ function buildReportRows(records: AnimalBiteRecord[]) {
       if (hasCompletedPep) {
         if (isBooster) {
           row.pepCompletedCategoryIIIBooster += 1
-        } else if (hasRig) {
-          row.pepCompletedCategoryIIIErig += 1
         } else {
-          row.pepCompletedCategoryIIIHrig += 1
+          const completedRigColumn = resolveCompletedCategoryThreeRigColumn(record)
+          if (completedRigColumn === 'erig') {
+            row.pepCompletedCategoryIIIErig += 1
+          } else if (completedRigColumn === 'hrig') {
+            row.pepCompletedCategoryIIIHrig += 1
+          }
         }
       }
     }
@@ -397,8 +399,6 @@ function applyTemplateSpecificOverrides(worksheet: Worksheet, records: AnimalBit
   // worksheet.getCell('C7').value = 'Roxas'
   // worksheet.getCell('J7').value = `${startDate} to ${endDate}`
 
-  // TODO: Split Category III completed counts into ERIG vs HRIG if the source schema gains
-  // a dedicated field that distinguishes which immunoglobulin was administered.
   void worksheet
   void records
   void startDate
@@ -517,8 +517,26 @@ function hasCompletedPepTreatment(record: AnimalBiteRecord) {
   return Boolean(record.fullRegimen || normalizeText(record.humanArvStatus) === 'complete')
 }
 
+function resolveCompletedCategoryThreeRigColumn(record: AnimalBiteRecord) {
+  // The PHO quarter/summary template only has explicit completed-Pep columns for ERIG and HRIG.
+  // If the record does not explicitly identify the RIG type, we leave both columns blank
+  // instead of guessing and exporting data into the wrong template bucket.
+  const rigType = normalizeText(record.rigType)
+
+  if (rigType === 'erig') return 'erig'
+  if (rigType === 'hrig') return 'hrig'
+
+  return null
+}
+
 function hasRigDose(record: AnimalBiteRecord) {
-  return Boolean(record.erigHrigActualDose || record.erigHrigComputedDose || record.erigHrigDateGiven)
+  return Boolean(
+    (record.rigType && normalizeText(record.rigType) !== 'none') ||
+    record.rigVolume ||
+    record.erigHrigActualDose ||
+    record.erigHrigComputedDose ||
+    record.erigHrigDateGiven,
+  )
 }
 
 function resolveAgeInMonths(record: AnimalBiteRecord) {

@@ -5,16 +5,23 @@ import { ArrowLeft, FilePlus2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { AnimalBiteRecord } from '../types'
 import AnimalBiteForm from '../components/AnimalBiteForm'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function NewRecordPage() {
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
+  const { user } = useAuth()
 
   const handleSubmit = async (data: Omit<AnimalBiteRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
     setSaving(true)
     try {
+      if (!user?.id) {
+        throw new Error('You must be signed in to create a record.')
+      }
+
       const now = new Date().toISOString()
       const payload = {
+        encoded_by: user.id,
         registration_number: data.registrationNumber || '',
         date_of_visit: data.dateOfVisit || now.slice(0, 10),
         full_name: data.fullName.trim(),
@@ -37,6 +44,8 @@ export default function NewRecordPage() {
         rr: data.rr || '',
         temp: data.temp || '',
         patient_weight: data.patientWeight || '',
+        rig_type: data.rigType || 'none',
+        rig_volume: data.rigVolume ? Number(data.rigVolume) : null,
         biting_animal: data.bitingAnimal || '',
         biting_animal_others: data.bitingAnimalOthers || '',
         ownership: data.ownership || '',
@@ -56,12 +65,17 @@ export default function NewRecordPage() {
         vaccine_brand_name: data.vaccineBrandName || '',
         vaccine_route: data.vaccineRoute || '',
         day0: data.day0 || null,
+        day_0_location: data.day0Location || '',
         day3: data.day3 || null,
+        day_3_location: data.day3Location || '',
         day7: data.day7 || null,
+        day_7_location: data.day7Location || '',
         day14: data.day14 || null,
+        day_14_location: data.day14Location || '',
         day2128: data.day2128 || null,
+        day_28_location: data.day2128Location || '',
         animal_status_after_day14: data.animalStatusAfterDay14 || '',
-        erig_hrig_computed_dose: data.erigHrigComputedDose || '',
+        erig_hrig_computed_dose: data.rigVolume || data.erigHrigComputedDose || '',
         erig_hrig_actual_dose: data.erigHrigActualDose || '',
         erig_hrig_date_given: data.erigHrigDateGiven || null,
         tetanus_wound_type: data.tetanusWoundType || '',

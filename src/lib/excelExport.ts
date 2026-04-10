@@ -98,7 +98,7 @@ export function exportToExcel(records: AnimalBiteRecord[], monthYear: string) {
     r.day2128 || '',
     r.ageInMonths != null ? ageGroup(r.ageInMonths) : '',
     (r.animalStatusAfterDay14 || '').toUpperCase(),
-    r.erigHrigComputedDose || '',
+    r.rigVolume || r.erigHrigComputedDose || '',
     r.erigHrigActualDose || '',
     r.erigHrigDateGiven || '',
     (r.tetanusWoundType || '').toUpperCase(),

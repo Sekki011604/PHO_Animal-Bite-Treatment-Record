@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import { Loader2, Pencil, Trash2, UserPlus2, Users } from 'lucide-react'
 import { toast } from '@blinkdotnew/ui'
 import { municipalities, municipalityBarangayMap } from '../lib/municipalityBarangayMap'
@@ -101,17 +102,44 @@ export default function CreateStaffPage() {
     setSubmitting(true)
 
     try {
+      const normalizedFullName = form.fullName.trim()
       const normalizedEmail = form.email.trim().toLowerCase()
-      const { data: adminSessionData } = await supabase.auth.getSession()
-      const adminSession = adminSessionData.session
+      const selectedMunicipality = form.municipality.trim()
+      const selectedBarangay = form.barangay.trim()
 
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      if (!selectedBarangay) {
+        console.error('Refusing to create staff account without a barangay assignment.', {
+          email: normalizedEmail,
+          municipality: selectedMunicipality,
+          barangay: selectedBarangay,
+        })
+        toast.error('Select a barangay before creating a staff account.')
+        return
+      }
+
+      console.log('Creating staff account with coverage assignment.', {
+        email: normalizedEmail,
+        full_name: normalizedFullName,
+        municipality: selectedMunicipality,
+        barangay: selectedBarangay,
+        role: 'staff',
+      })
+
+      const tempSupabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } },
+      )
+
+      const { data: signUpData, error: signUpError } = await tempSupabase.auth.signUp({
         email: normalizedEmail,
         password: form.password,
         options: {
           data: {
-            full_name: form.fullName,
+            full_name: normalizedFullName,
             role: 'staff',
+            municipality: selectedMunicipality,
+            barangay: selectedBarangay,
           },
         },
       })
@@ -128,23 +156,16 @@ export default function CreateStaffPage() {
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: signUpData.user.id,
         email: normalizedEmail,
-        full_name: form.fullName,
+        full_name: normalizedFullName,
         role: 'staff',
-        municipality: form.municipality,
-        barangay: form.barangay,
+        municipality: selectedMunicipality,
+        barangay: selectedBarangay,
         created_at: timestamp,
         updated_at: timestamp,
       })
 
       if (profileError) {
         throw profileError
-      }
-
-      if (adminSession?.access_token && adminSession.refresh_token) {
-        await supabase.auth.setSession({
-          access_token: adminSession.access_token,
-          refresh_token: adminSession.refresh_token,
-        })
       }
 
       toast.success('Staff account created successfully.')

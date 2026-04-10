@@ -4,7 +4,7 @@ import { ArrowRight, Download, FilePlus2, LoaderCircle, Search, Trash2, Upload }
 import { supabase } from '../lib/supabase'
 import { AnimalBiteRecord } from '../types'
 import { toast } from '@blinkdotnew/ui'
-import { mapAnimalBiteRecord } from '../lib/recordMapper'
+import { animalBiteRecordSelect, mapAnimalBiteRecord } from '../lib/recordMapper'
 import { generatePHOReport } from '../utils/exportExcel'
 import { parseAnimalBiteImportFile } from '../utils/importExcel'
 
@@ -39,7 +39,7 @@ export default function RecordsPage() {
       setLoading(true)
       let query = supabase
         .from('animal_bite_records')
-        .select('*')
+        .select(animalBiteRecordSelect)
 
       if (activeStartDate) {
         query = query.gte('date_of_visit', activeStartDate)

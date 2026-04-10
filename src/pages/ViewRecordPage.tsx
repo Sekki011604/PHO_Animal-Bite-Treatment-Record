@@ -5,7 +5,7 @@ import { AnimalBiteRecord } from '../types'
 import AnimalBiteForm from '../components/AnimalBiteForm'
 import { toast } from '@blinkdotnew/ui'
 import { ArrowLeft, Printer } from 'lucide-react'
-import { mapAnimalBiteRecord } from '../lib/recordMapper'
+import { animalBiteRecordSelect, mapAnimalBiteRecord } from '../lib/recordMapper'
 
 export default function ViewRecordPage() {
   const { id } = useParams<{ id: string }>()
@@ -18,7 +18,7 @@ export default function ViewRecordPage() {
       try {
         const { data: raw, error } = await supabase
           .from('animal_bite_records')
-          .select('*')
+          .select(animalBiteRecordSelect)
           .eq('id', id!)
           .maybeSingle()
 
@@ -53,6 +53,14 @@ export default function ViewRecordPage() {
 
   if (!record) return null
 
+  const encodedByName = record.profiles?.full_name || 'Unknown Staff'
+  const recordForView: AnimalBiteRecord = {
+    ...record,
+    profiles: {
+      full_name: encodedByName,
+    },
+  }
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="executive-panel mb-6 overflow-hidden">
@@ -83,7 +91,7 @@ export default function ViewRecordPage() {
       <AnimalBiteForm
         onSubmit={() => {}}
         saving={false}
-        initialData={record}
+        initialData={recordForView}
         readOnly={true}
       />
     </div>

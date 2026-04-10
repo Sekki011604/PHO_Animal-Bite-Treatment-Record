@@ -1,5 +1,8 @@
 import { AnimalBiteRecord } from '../types'
 
+export const animalBiteRecordSelect =
+  '*, profiles!fk_encoded_by(full_name)'
+
 function pick(r: Record<string, unknown>, camel: string, snake?: string) {
   const snakeKey = snake || camel.replace(/[A-Z]/g, m => `_${m.toLowerCase()}`)
   return r[camel] ?? r[snakeKey]
@@ -19,11 +22,24 @@ function asBool(value: unknown) {
   return false
 }
 
+function asProfile(value: unknown): AnimalBiteRecord['profiles'] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+
+  const profile = value as Record<string, unknown>
+  const fullName = profile.full_name
+
+  return {
+    full_name: typeof fullName === 'string' ? fullName : null,
+  }
+}
+
 export function mapAnimalBiteRecord(r: Record<string, unknown>): AnimalBiteRecord {
   const ageInMonthsRaw = pick(r, 'ageInMonths', 'age_in_months')
 
   return {
     id: asText(pick(r, 'id')),
+    encodedBy: asText(pick(r, 'encodedBy', 'encoded_by')),
+    profiles: asProfile(pick(r, 'profiles')),
     registrationNumber: asText(pick(r, 'registrationNumber', 'registration_number')),
     dateOfVisit: asText(pick(r, 'dateOfVisit', 'date_of_visit')),
     fullName: asText(pick(r, 'fullName', 'full_name')),
@@ -46,6 +62,8 @@ export function mapAnimalBiteRecord(r: Record<string, unknown>): AnimalBiteRecor
     rr: asText(pick(r, 'rr')),
     temp: asText(pick(r, 'temp')),
     patientWeight: asText(pick(r, 'patientWeight', 'patient_weight')),
+    rigType: asText(pick(r, 'rigType', 'rig_type')),
+    rigVolume: asText(pick(r, 'rigVolume', 'rig_volume')),
     bitingAnimal: asText(pick(r, 'bitingAnimal', 'biting_animal')),
     bitingAnimalOthers: asText(pick(r, 'bitingAnimalOthers', 'biting_animal_others')),
     ownership: asText(pick(r, 'ownership')),
@@ -65,10 +83,15 @@ export function mapAnimalBiteRecord(r: Record<string, unknown>): AnimalBiteRecor
     vaccineBrandName: asText(pick(r, 'vaccineBrandName', 'vaccine_brand_name')),
     vaccineRoute: asText(pick(r, 'vaccineRoute', 'vaccine_route')),
     day0: asText(pick(r, 'day0')),
+    day0Location: asText(pick(r, 'day0Location', 'day_0_location')),
     day3: asText(pick(r, 'day3')),
+    day3Location: asText(pick(r, 'day3Location', 'day_3_location')),
     day7: asText(pick(r, 'day7')),
+    day7Location: asText(pick(r, 'day7Location', 'day_7_location')),
     day14: asText(pick(r, 'day14')),
+    day14Location: asText(pick(r, 'day14Location', 'day_14_location')),
     day2128: asText(pick(r, 'day2128', 'day21_28')),
+    day2128Location: asText(pick(r, 'day2128Location', 'day_28_location')),
     animalStatusAfterDay14: asText(pick(r, 'animalStatusAfterDay14', 'animal_status_after_day14')),
     erigHrigComputedDose: asText(pick(r, 'erigHrigComputedDose', 'erig_hrig_computed_dose')),
     erigHrigActualDose: asText(pick(r, 'erigHrigActualDose', 'erig_hrig_actual_dose')),

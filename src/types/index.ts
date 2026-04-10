@@ -1,5 +1,9 @@
 export interface AnimalBiteRecord {
   id: string
+  encodedBy?: string
+  profiles?: {
+    full_name?: string | null
+  } | null
   registrationNumber?: string
   dateOfVisit?: string
   fullName: string
@@ -26,6 +30,8 @@ export interface AnimalBiteRecord {
   rr?: string
   temp?: string
   patientWeight?: string
+  rigType?: string // 'none' | 'erig' | 'hrig'
+  rigVolume?: string
   // Biting Incident
   bitingAnimal?: string // 'dog' | 'cat' | 'others'
   bitingAnimalOthers?: string
@@ -47,11 +53,16 @@ export interface AnimalBiteRecord {
   vaccineBrandName?: string
   vaccineRoute?: string // 'id' | 'im'
   day0?: string
+  day0Location?: string
   day3?: string
+  day3Location?: string
   day7?: string
+  day7Location?: string
   day14?: string
+  day14Location?: string
   /** Day 21 or 28 dose date — stored as day2128 (no underscore) for DB compatibility */
   day2128?: string
+  day2128Location?: string
   animalStatusAfterDay14?: string // 'alive' | 'dead' | 'lost'
   // ERIG/HRIG
   erigHrigComputedDose?: string

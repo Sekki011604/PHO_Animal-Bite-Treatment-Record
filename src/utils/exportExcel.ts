@@ -1,5 +1,17 @@
 import type { Worksheet } from 'exceljs'
 import { AnimalBiteRecord } from '../types'
+import {
+  computeDOHClassification,
+  type DOHAnimalStatusGroup,
+  type DOHAgeBucket,
+  type DOHBitingAnimalGroup,
+  type DOHClassification,
+  type DOHCompletionStatus,
+  type DOHDoseKey,
+  type DOHImmunizationHistory,
+  type DOHPepEligibility,
+  type DOHRigType,
+} from './dohReportClassifier'
 
 type QuarterNumber = 1 | 2 | 3 | 4
 
@@ -32,6 +44,19 @@ type PhoReportRow = {
   humanRabiesCases: number
 }
 
+type ClassifiedAnimalBiteRecord = {
+  record: AnimalBiteRecord
+  classification: DOHClassification
+}
+
+type WorkbookLike = {
+  addWorksheet: (name: string) => Worksheet
+  getWorksheet: (name: string) => Worksheet | undefined
+  removeWorksheet: (id: number) => void
+  worksheets: Worksheet[]
+  views?: { activeTab?: number }[]
+}
+
 const QUARTER_SHEET_NAMES: Record<QuarterNumber, string> = {
   1: 'Quarter 1',
   2: 'Quarter 2',
@@ -40,6 +65,7 @@ const QUARTER_SHEET_NAMES: Record<QuarterNumber, string> = {
 }
 
 const SUMMARY_SHEET_NAME = 'Summary'
+const CLASSIFIED_RECORDS_SHEET_NAME = 'DOH Classified Records'
 const DETAIL_START_ROW = 16
 const DETAIL_END_ROW = 35
 const TOTAL_ROW = 36
@@ -67,8 +93,9 @@ export async function generatePHOReport(records: AnimalBiteRecord[], startDate?:
   workbook.calcProperties.forceFullCalc = true
 
   const datedRecords = filterRecordsByDateRange(records, startDate, endDate)
+  const classifiedRecords = classifyRecords(datedRecords)
   const municipalityLabel = getMunicipalityLabel(datedRecords)
-  const quarterBuckets = groupRecordsByQuarter(datedRecords)
+  const quarterBuckets = groupRecordsByQuarter(classifiedRecords)
 
   for (const quarter of [1, 2, 3, 4] as const) {
     const sheet = workbook.getWorksheet(QUARTER_SHEET_NAMES[quarter])
@@ -77,18 +104,20 @@ export async function generatePHOReport(records: AnimalBiteRecord[], startDate?:
     const quarterRows = buildReportRows(quarterBuckets[quarter])
     populateReportSheet(sheet, quarterRows, {
       municipalityLabel,
-      periodLabel: buildQuarterPeriodLabel(quarter, quarterBuckets[quarter], startDate, endDate),
+      periodLabel: buildQuarterPeriodLabel(quarter, quarterBuckets[quarter].map(({ record }) => record), startDate, endDate),
     })
   }
 
   const summarySheet = workbook.getWorksheet(SUMMARY_SHEET_NAME)
   if (summarySheet) {
-    const summaryRows = buildReportRows(datedRecords)
+    const summaryRows = buildReportRows(classifiedRecords)
     populateReportSheet(summarySheet, summaryRows, {
       municipalityLabel,
       periodLabel: buildSummaryPeriodLabel(datedRecords, startDate, endDate),
     })
   }
+
+  appendClassifiedRecordsSheet(workbook, classifiedRecords)
 
   applyTemplateSpecificOverrides(
     workbook.getWorksheet(resolveActiveSheetName(datedRecords, startDate, endDate)) ?? summarySheet ?? workbook.worksheets[0],
@@ -121,102 +150,117 @@ function filterRecordsByDateRange(records: AnimalBiteRecord[], startDate?: strin
   })
 }
 
-function groupRecordsByQuarter(records: AnimalBiteRecord[]) {
-  const grouped: Record<QuarterNumber, AnimalBiteRecord[]> = {
+function classifyRecords(records: AnimalBiteRecord[]): ClassifiedAnimalBiteRecord[] {
+  return records.map((record) => ({
+    record,
+    classification: computeDOHClassification(record),
+  }))
+}
+
+function groupRecordsByQuarter(records: ClassifiedAnimalBiteRecord[]) {
+  const grouped: Record<QuarterNumber, ClassifiedAnimalBiteRecord[]> = {
     1: [],
     2: [],
     3: [],
     4: [],
   }
 
-  records.forEach((record) => {
-    const recordDate = getRecordDate(record)
+  records.forEach((entry) => {
+    const recordDate = getRecordDate(entry.record)
     if (!recordDate) return
-    grouped[getQuarter(recordDate)].push(record)
+    grouped[getQuarter(recordDate)].push(entry)
   })
 
   return grouped
 }
 
-function buildReportRows(records: AnimalBiteRecord[]) {
+function buildReportRows(records: ClassifiedAnimalBiteRecord[]) {
   const aggregates = new Map<string, PhoReportRow>()
 
-  records.forEach((record) => {
+  records.forEach(({ record, classification }) => {
     const key = getLocationLabel(record)
     const row = aggregates.get(key) ?? createEmptyRow(key)
-    const category = normalizeText(record.category)
     const gender = normalizeText(record.gender)
-    const ownership = normalizeText(record.ownership)
-    const bitingAnimal = normalizeText(record.bitingAnimal)
-    const isBooster = Boolean(record.booster)
-    const hasAnyPep = hasAnyPepTreatment(record)
-    const hasCompletedPep = hasCompletedPepTreatment(record)
-    const ageInMonths = resolveAgeInMonths(record)
     row.caseCount += 1
 
     if (gender === 'male') row.male += 1
     else if (gender === 'female') row.female += 1
 
-    if (ageInMonths != null && ageInMonths < 180) row.under15 += 1
-    else row.over15 += 1
+    if (classification.ageBucket === 'under_15') row.under15 += 1
+    else if (classification.ageBucket === '15_and_above') row.over15 += 1
 
-    if (category === 'i') {
-      row.categoryI += 1
-    } else if (category === 'ii') {
-      if (!hasAnyPep || normalizeText(record.humanArvStatus) === 'none') {
-        row.categoryIINonEligible += 1
-      } else if (isBooster) {
-        row.categoryIIBooster += 1
-      } else {
-        row.categoryIIPrimary += 1
-      }
-
-      if (hasCompletedPep) {
-        if (isBooster) row.pepCompletedCategoryIIBooster += 1
-        else row.pepCompletedCategoryIIPrimary += 1
-      }
-    } else if (category === 'iii') {
-      if (!hasAnyPep || normalizeText(record.humanArvStatus) === 'none') {
-        row.categoryIIINonEligible += 1
-      } else if (isBooster) {
-        row.categoryIIIBooster += 1
-      } else {
-        row.categoryIIIPrimary += 1
-      }
-
-      if (hasCompletedPep) {
-        if (isBooster) {
-          row.pepCompletedCategoryIIIBooster += 1
-        } else {
-          const completedRigColumn = resolveCompletedCategoryThreeRigColumn(record)
-          if (completedRigColumn === 'erig') {
-            row.pepCompletedCategoryIIIErig += 1
-          } else if (completedRigColumn === 'hrig') {
-            row.pepCompletedCategoryIIIHrig += 1
-          }
-        }
-      }
-    }
-
-    if (bitingAnimal === 'dog') row.dog += 1
-    else if (bitingAnimal === 'cat') row.cat += 1
-    else row.others += 1
-
-    if (ownership === 'owned') row.petDomestic += 1
-    else if (ownership === 'stray') row.strayFreeRoaming += 1
-    else row.unknownOwnership += 1
-
-    // Keep the required sex totals aligned with case totals even when source data has blanks.
-    const missingSexAssignments = row.caseCount - (row.male + row.female)
-    if (missingSexAssignments > 0) {
-      row.female += missingSexAssignments
-    }
+    applyPepClassificationTotals(row, classification)
+    applyPepCompletionTotals(row, classification)
+    applyAnimalTotals(row, classification)
 
     aggregates.set(key, row)
   })
 
   const rows = Array.from(aggregates.values()).sort((a, b) => a.location.localeCompare(b.location))
   return condenseRows(rows)
+}
+
+function applyPepClassificationTotals(row: PhoReportRow, classification: DOHClassification) {
+  switch (classification.regimenType) {
+    case 'none':
+      row.categoryI += 1
+      break
+    case 'category_ii_primary_cceev':
+      row.categoryIIPrimary += 1
+      break
+    case 'category_ii_booster_cceev':
+      row.categoryIIBooster += 1
+      break
+    case 'category_ii_non_eligible':
+      row.categoryIINonEligible += 1
+      break
+    case 'category_iii_primary_cceev_rig':
+      row.categoryIIIPrimary += 1
+      break
+    case 'category_iii_booster_cceev_only':
+      row.categoryIIIBooster += 1
+      break
+    case 'category_iii_non_eligible':
+      row.categoryIIINonEligible += 1
+      break
+    default:
+      if (classification.dohCategory === 'I') row.categoryI += 1
+      else if (classification.dohCategory === 'II') row.categoryIINonEligible += 1
+      else if (classification.dohCategory === 'III') row.categoryIIINonEligible += 1
+      break
+  }
+}
+
+function applyPepCompletionTotals(row: PhoReportRow, classification: DOHClassification) {
+  if (classification.completionStatus !== 'completed') return
+
+  switch (classification.regimenType) {
+    case 'category_ii_primary_cceev':
+      row.pepCompletedCategoryIIPrimary += 1
+      break
+    case 'category_ii_booster_cceev':
+      row.pepCompletedCategoryIIBooster += 1
+      break
+    case 'category_iii_primary_cceev_rig':
+      if (classification.rigType === 'erig') row.pepCompletedCategoryIIIErig += 1
+      else if (classification.rigType === 'hrig') row.pepCompletedCategoryIIIHrig += 1
+      break
+    case 'category_iii_booster_cceev_only':
+      row.pepCompletedCategoryIIIBooster += 1
+      break
+    default:
+      break
+  }
+}
+
+function applyAnimalTotals(row: PhoReportRow, classification: DOHClassification) {
+  if (classification.bitingAnimalGroup === 'dog') row.dog += 1
+  else if (classification.bitingAnimalGroup === 'cat') row.cat += 1
+  else if (classification.bitingAnimalGroup === 'other') row.others += 1
+
+  if (classification.animalStatusGroup === 'pet_domestic') row.petDomestic += 1
+  else if (classification.animalStatusGroup === 'stray_free_roaming') row.strayFreeRoaming += 1
+  else row.unknownOwnership += 1
 }
 
 function condenseRows(rows: PhoReportRow[]) {
@@ -392,6 +436,276 @@ function setFormula(worksheet: Worksheet, address: string, formula: string) {
   worksheet.getCell(address).value = { formula, result: 0 }
 }
 
+function appendClassifiedRecordsSheet(workbook: WorkbookLike, records: ClassifiedAnimalBiteRecord[]) {
+  const existingSheet = workbook.getWorksheet(CLASSIFIED_RECORDS_SHEET_NAME)
+  if (existingSheet && typeof existingSheet.id === 'number') {
+    workbook.removeWorksheet(existingSheet.id)
+  }
+
+  const worksheet = workbook.addWorksheet(CLASSIFIED_RECORDS_SHEET_NAME)
+  worksheet.views = [{ state: 'frozen', ySplit: 1 }]
+  worksheet.columns = [
+    { header: 'Date of Visit', key: 'dateOfVisit', width: 14 },
+    { header: 'Registry No.', key: 'registrationNumber', width: 16 },
+    { header: 'Full Name', key: 'fullName', width: 24 },
+    { header: 'Municipality', key: 'municipality', width: 18 },
+    { header: 'Barangay', key: 'barangay', width: 18 },
+    { header: 'Sex', key: 'gender', width: 10 },
+    { header: 'Age', key: 'age', width: 12 },
+    { header: 'DOH Age Bucket', key: 'ageBucket', width: 18 },
+    { header: 'Biting Animal', key: 'bitingAnimal', width: 16 },
+    { header: 'DOH Animal Group', key: 'bitingAnimalGroup', width: 18 },
+    { header: 'Ownership', key: 'ownership', width: 16 },
+    { header: 'DOH Animal Status', key: 'animalStatusGroup', width: 22 },
+    { header: 'Category', key: 'category', width: 10 },
+    { header: 'DOH Category', key: 'dohCategory', width: 14 },
+    { header: 'Human ARV Status', key: 'humanArvStatus', width: 18 },
+    { header: 'Date Last Vaccination', key: 'dateLastVaccination', width: 18 },
+    { header: 'Immunization History', key: 'immunizationHistory', width: 24 },
+    { header: 'Immunocompromised', key: 'immunocompromised', width: 18 },
+    { header: 'Anti-Rabies Vaccination', key: 'antiRabiesVaccination', width: 22 },
+    { header: 'Animal Status After Day 14', key: 'animalStatusAfterDay14', width: 24 },
+    { header: 'RIG Type', key: 'rigType', width: 12 },
+    { header: 'RIG Computed Dose', key: 'erigHrigComputedDose', width: 18 },
+    { header: 'RIG Actual Dose', key: 'erigHrigActualDose', width: 18 },
+    { header: 'RIG Date Given', key: 'erigHrigDateGiven', width: 16 },
+    { header: 'Day 0', key: 'day0', width: 12 },
+    { header: 'Day 0 Location', key: 'day0Location', width: 20 },
+    { header: 'Day 3', key: 'day3', width: 12 },
+    { header: 'Day 3 Location', key: 'day3Location', width: 20 },
+    { header: 'Day 7', key: 'day7', width: 12 },
+    { header: 'Day 7 Location', key: 'day7Location', width: 20 },
+    { header: 'Day 14', key: 'day14', width: 12 },
+    { header: 'Day 14 Location', key: 'day14Location', width: 20 },
+    { header: 'Day 21/28', key: 'day2128', width: 12 },
+    { header: 'Day 21/28 Location', key: 'day2128Location', width: 20 },
+    { header: 'PEP Eligibility', key: 'pepEligibility', width: 18 },
+    { header: 'PEP Eligibility Reason', key: 'pepEligibilityReason', width: 42 },
+    { header: 'Regimen Type', key: 'regimenType', width: 30 },
+    { header: 'Completion Status', key: 'completionStatus', width: 18 },
+    { header: 'Completion Reason', key: 'completionReason', width: 36 },
+    { header: 'Required Doses', key: 'requiredDoseKeys', width: 18 },
+    { header: 'Documented Doses', key: 'documentedDoseKeys', width: 18 },
+    { header: 'Missing Doses', key: 'missingDoseKeys', width: 18 },
+    { header: 'Documented Dose Locations', key: 'documentedLocationKeys', width: 22 },
+    { header: 'High-Risk Criteria', key: 'highRiskCriteria', width: 52 },
+  ]
+
+  records.forEach(({ record, classification }) => {
+    worksheet.addRow({
+      dateOfVisit: record.dateOfVisit || '',
+      registrationNumber: record.registrationNumber || '',
+      fullName: record.fullName || '',
+      municipality: record.municipality || '',
+      barangay: record.barangay || '',
+      gender: formatGender(record.gender),
+      age: record.age || '',
+      ageBucket: formatAgeBucket(classification.ageBucket),
+      bitingAnimal: formatBitingAnimalValue(record),
+      bitingAnimalGroup: formatBitingAnimalGroup(classification.bitingAnimalGroup),
+      ownership: formatOwnership(record.ownership),
+      animalStatusGroup: formatAnimalStatusGroup(classification.animalStatusGroup),
+      category: record.category || '',
+      dohCategory: classification.dohCategory,
+      humanArvStatus: formatHumanArvStatus(record.humanArvStatus),
+      dateLastVaccination: record.dateLastVaccination || '',
+      immunizationHistory: formatImmunizationHistory(classification.immunizationHistory),
+      immunocompromised: classification.immunocompromised ? 'Yes' : 'No',
+      antiRabiesVaccination: formatAnimalVaccinationStatus(record.antiRabiesVaccination),
+      animalStatusAfterDay14: formatAnimalStatusAfterDay14(record.animalStatusAfterDay14),
+      rigType: formatRigType(classification.rigType),
+      erigHrigComputedDose: record.erigHrigComputedDose || record.rigVolume || '',
+      erigHrigActualDose: record.erigHrigActualDose || '',
+      erigHrigDateGiven: record.erigHrigDateGiven || '',
+      day0: record.day0 || '',
+      day0Location: record.day0Location || '',
+      day3: record.day3 || '',
+      day3Location: record.day3Location || '',
+      day7: record.day7 || '',
+      day7Location: record.day7Location || '',
+      day14: record.day14 || '',
+      day14Location: record.day14Location || '',
+      day2128: record.day2128 || '',
+      day2128Location: record.day2128Location || '',
+      pepEligibility: formatPepEligibility(classification.pepEligibility),
+      pepEligibilityReason: classification.pepEligibilityReason,
+      regimenType: classification.regimenLabel,
+      completionStatus: formatCompletionStatus(classification.completionStatus),
+      completionReason: classification.completionReason,
+      requiredDoseKeys: formatDoseKeys(classification.doseProgress.requiredDoseKeys),
+      documentedDoseKeys: formatDoseKeys(classification.doseProgress.documentedDoseKeys),
+      missingDoseKeys: formatDoseKeys(classification.doseProgress.missingDoseKeys),
+      documentedLocationKeys: formatDoseKeys(classification.doseProgress.documentedLocationKeys),
+      highRiskCriteria: formatHighRiskCriteria(classification),
+    })
+  })
+
+  const headerRow = worksheet.getRow(1)
+  headerRow.font = { bold: true, color: { argb: 'FF103F2E' } }
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+  headerRow.eachCell((cell) => {
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE8F3E6' },
+    }
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFB7C8B1' } },
+      bottom: { style: 'thin', color: { argb: 'FFB7C8B1' } },
+      left: { style: 'thin', color: { argb: 'FFB7C8B1' } },
+      right: { style: 'thin', color: { argb: 'FFB7C8B1' } },
+    }
+  })
+
+  worksheet.autoFilter = {
+    from: 'A1',
+    to: `${columnNumberToName(worksheet.columns.length)}1`,
+  }
+}
+
+function formatGender(value?: string | null) {
+  const normalized = normalizeText(value)
+  if (normalized === 'male') return 'Male'
+  if (normalized === 'female') return 'Female'
+  return ''
+}
+
+function formatAgeBucket(value: DOHAgeBucket) {
+  if (value === 'under_15') return '<15 years old'
+  if (value === '15_and_above') return '15 years old and above'
+  return 'Unknown'
+}
+
+function formatBitingAnimalValue(record: AnimalBiteRecord) {
+  const animal = normalizeText(record.bitingAnimal)
+  if (animal === 'dog') return 'Dog'
+  if (animal === 'cat') return 'Cat'
+  if (animal === 'others') return record.bitingAnimalOthers?.trim() || 'Other'
+  return record.bitingAnimalOthers?.trim() || ''
+}
+
+function formatBitingAnimalGroup(value: DOHBitingAnimalGroup) {
+  if (value === 'dog') return 'Dog'
+  if (value === 'cat') return 'Cat'
+  if (value === 'other') return 'Other'
+  return 'Unknown'
+}
+
+function formatOwnership(value?: string | null) {
+  const normalized = normalizeText(value)
+  if (normalized === 'owned') return 'Owned / Pet / Domestic'
+  if (normalized === 'stray') return 'Stray / Free-Roaming'
+  return ''
+}
+
+function formatAnimalStatusGroup(value: DOHAnimalStatusGroup) {
+  if (value === 'pet_domestic') return 'Owned / Pet / Domestic'
+  if (value === 'stray_free_roaming') return 'Stray / Free-Roaming'
+  return 'Unknown'
+}
+
+function formatHumanArvStatus(value?: string | null) {
+  const normalized = normalizeText(value)
+  if (normalized === 'complete') return 'Complete'
+  if (normalized === 'incomplete') return 'Incomplete'
+  if (normalized === 'none') return 'None'
+  return ''
+}
+
+function formatImmunizationHistory(value: DOHImmunizationHistory) {
+  if (value === 'immunologically_naive') return 'Immunologically-naive'
+  if (value === 'previously_immunized') return 'Previously-immunized'
+  return 'Unknown'
+}
+
+function formatAnimalVaccinationStatus(value?: string | null) {
+  const normalized = normalizeText(value)
+  if (normalized === 'with_vaccination') return 'Vaccinated'
+  if (normalized === 'none') return 'None / Unknown'
+  return ''
+}
+
+function formatAnimalStatusAfterDay14(value?: string | null) {
+  const normalized = normalizeText(value)
+  if (!normalized) return ''
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}
+
+function formatRigType(value: DOHRigType) {
+  if (value === 'erig') return 'ERIG'
+  if (value === 'hrig') return 'HRIG'
+  if (value === 'none') return 'None'
+  return 'Unknown'
+}
+
+function formatPepEligibility(value: DOHPepEligibility) {
+  if (value === 'pep_eligible') return 'PEP Eligible'
+  if (value === 'pep_non_eligible') return 'PEP Non-Eligible'
+  return 'Not Applicable'
+}
+
+function formatCompletionStatus(value: DOHCompletionStatus) {
+  if (value === 'completed') return 'Completed'
+  if (value === 'incomplete') return 'Incomplete'
+  return 'Not Applicable'
+}
+
+function formatDoseKeys(values: DOHDoseKey[]) {
+  if (values.length === 0) return ''
+
+  return values
+    .map((value) => {
+      if (value === 'day0') return 'D0'
+      if (value === 'day3') return 'D3'
+      if (value === 'day7') return 'D7'
+      if (value === 'day14') return 'D14'
+      return 'D21/28'
+    })
+    .join(', ')
+}
+
+function formatHighRiskCriteria(classification: DOHClassification) {
+  const flags: string[] = []
+  const { highRiskCriteria } = classification
+
+  if (highRiskCriteria.previouslyVaccinatedOverSixMonths) {
+    flags.push('Previously immunized more than 6 months ago')
+  }
+  if (highRiskCriteria.animalUnavailableOrHighRisk) {
+    flags.push('Animal unavailable for observation, died, or high-risk species')
+  }
+  if (highRiskCriteria.highlyInnervatedWound) {
+    flags.push('Highly innervated wound site')
+  }
+  if (highRiskCriteria.multipleOrDeepWounds) {
+    flags.push('Multiple or deep wounds')
+  }
+  if (highRiskCriteria.uncontrolledComorbidities) {
+    flags.push('Uncontrolled comorbidities or immunocompromised')
+  }
+  if (highRiskCriteria.hardToReachArea) {
+    flags.push('Hard-to-reach area')
+  }
+  if (highRiskCriteria.vaccinatedAnimalAvailableForObservation && !highRiskCriteria.any) {
+    flags.push('Vaccinated animal available for 14-day observation')
+  }
+
+  return flags.join('; ') || 'None documented'
+}
+
+function columnNumberToName(columnNumber: number) {
+  let dividend = columnNumber
+  let columnName = ''
+
+  while (dividend > 0) {
+    const modulo = (dividend - 1) % 26
+    columnName = String.fromCharCode(65 + modulo) + columnName
+    dividend = Math.floor((dividend - modulo) / 26)
+  }
+
+  return columnName
+}
+
 function applyTemplateSpecificOverrides(worksheet: Worksheet, records: AnimalBiteRecord[], startDate?: string | null, endDate?: string | null) {
   // TODO: Map the province-approved fixed cell coordinates once the final PHO layout is confirmed.
   // Example:
@@ -493,66 +807,6 @@ function getMunicipalityLabel(records: AnimalBiteRecord[]) {
 
 function getLocationLabel(record: AnimalBiteRecord) {
   return record.barangay?.trim() || record.municipality?.trim() || 'Unknown Location'
-}
-
-function getTotalCases(row: PhoReportRow) {
-  return row.caseCount
-}
-
-function hasAnyPepTreatment(record: AnimalBiteRecord) {
-  return Boolean(
-    record.fullRegimen ||
-    record.booster ||
-    hasRigDose(record) ||
-    record.day0 ||
-    record.day3 ||
-    record.day7 ||
-    record.day14 ||
-    record.day2128 ||
-    (record.humanArvStatus && normalizeText(record.humanArvStatus) !== 'none'),
-  )
-}
-
-function hasCompletedPepTreatment(record: AnimalBiteRecord) {
-  return Boolean(record.fullRegimen || normalizeText(record.humanArvStatus) === 'complete')
-}
-
-function resolveCompletedCategoryThreeRigColumn(record: AnimalBiteRecord) {
-  // The PHO quarter/summary template only has explicit completed-Pep columns for ERIG and HRIG.
-  // If the record does not explicitly identify the RIG type, we leave both columns blank
-  // instead of guessing and exporting data into the wrong template bucket.
-  const rigType = normalizeText(record.rigType)
-
-  if (rigType === 'erig') return 'erig'
-  if (rigType === 'hrig') return 'hrig'
-
-  return null
-}
-
-function hasRigDose(record: AnimalBiteRecord) {
-  return Boolean(
-    (record.rigType && normalizeText(record.rigType) !== 'none') ||
-    record.rigVolume ||
-    record.erigHrigActualDose ||
-    record.erigHrigComputedDose ||
-    record.erigHrigDateGiven,
-  )
-}
-
-function resolveAgeInMonths(record: AnimalBiteRecord) {
-  if (typeof record.ageInMonths === 'number' && !Number.isNaN(record.ageInMonths)) {
-    return record.ageInMonths
-  }
-
-  if (record.age) {
-    const years = /(\d+)\s*yr/.exec(record.age.toLowerCase())
-    const months = /(\d+)\s*mo/.exec(record.age.toLowerCase())
-    if (years || months) {
-      return Number(years?.[1] || 0) * 12 + Number(months?.[1] || 0)
-    }
-  }
-
-  return null
 }
 
 function getRecordDate(record: AnimalBiteRecord) {

@@ -1099,16 +1099,16 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
           </div>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="font-medium w-40 shrink-0">Date of last Anti-Tetanus{!readOnly && <RequiredAsterisk />}:</span>
-              {dateInput('tetanusDateLast', '', { required: !readOnly })}
+              <span className="font-medium w-40 shrink-0">Date of last Anti-Tetanus:</span>
+              {dateInput('tetanusDateLast')}
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium w-28 shrink-0">Tetanus Toxoid{!readOnly && <RequiredAsterisk />}:</span>
-              <TextInput name="tetanusToxoid" value={form.tetanusToxoid || ''} onChange={v => set('tetanusToxoid', v)} readOnly={readOnly} required={!readOnly} />
+              <span className="font-medium w-28 shrink-0">Tetanus Toxoid:</span>
+              <TextInput name="tetanusToxoid" value={form.tetanusToxoid || ''} onChange={v => set('tetanusToxoid', v)} readOnly={readOnly} />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium w-28 shrink-0">ATS{!readOnly && <RequiredAsterisk />}:</span>
-              <TextInput name="ats" value={form.ats || ''} onChange={v => set('ats', v)} readOnly={readOnly} required={!readOnly} />
+              <span className="font-medium w-28 shrink-0">ATS:</span>
+              <TextInput name="ats" value={form.ats || ''} onChange={v => set('ats', v)} readOnly={readOnly} />
             </div>
           </div>
         </div>

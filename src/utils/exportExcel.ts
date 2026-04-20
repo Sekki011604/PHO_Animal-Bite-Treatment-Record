@@ -190,7 +190,7 @@ function buildReportRows(records: ClassifiedAnimalBiteRecord[]) {
     else if (classification.ageBucket === '15_and_above') row.over15 += 1
 
     applyPepClassificationTotals(row, classification)
-    applyPepCompletionTotals(row, classification)
+    applyPepCompletionTotals(row, record, classification)
     applyAnimalTotals(row, classification)
 
     aggregates.set(key, row)
@@ -231,7 +231,17 @@ function applyPepClassificationTotals(row: PhoReportRow, classification: DOHClas
   }
 }
 
-function applyPepCompletionTotals(row: PhoReportRow, classification: DOHClassification) {
+function applyPepCompletionTotals(row: PhoReportRow, record: AnimalBiteRecord, classification: DOHClassification) {
+  if (classification.dohCategory === 'III') {
+    const completedCategoryThreeBucket = resolveCompletedCategoryThreeBucket(record, classification)
+
+    if (completedCategoryThreeBucket === 'erig') row.pepCompletedCategoryIIIErig += 1
+    else if (completedCategoryThreeBucket === 'hrig') row.pepCompletedCategoryIIIHrig += 1
+    else if (completedCategoryThreeBucket === 'booster') row.pepCompletedCategoryIIIBooster += 1
+
+    return
+  }
+
   if (classification.completionStatus !== 'completed') return
 
   switch (classification.regimenType) {
@@ -251,6 +261,43 @@ function applyPepCompletionTotals(row: PhoReportRow, classification: DOHClassifi
     default:
       break
   }
+}
+
+function resolveCompletedCategoryThreeBucket(
+  record: AnimalBiteRecord,
+  classification: DOHClassification,
+): 'erig' | 'hrig' | 'booster' | null {
+  if (classification.regimenType === 'category_iii_booster_cceev_only') {
+    return classification.completionStatus === 'completed' ? 'booster' : null
+  }
+
+  if (classification.regimenType !== 'category_iii_primary_cceev_rig') {
+    return null
+  }
+
+  if (classification.completionStatus === 'completed') {
+    if (classification.rigType === 'erig') return 'erig'
+    if (classification.rigType === 'hrig') return 'hrig'
+  }
+
+  if (classification.doseProgress.missingDoseKeys.length > 0) {
+    return null
+  }
+
+  return hasRecordedRigTreatment(record) ? null : 'booster'
+}
+
+function hasRecordedRigTreatment(record: AnimalBiteRecord) {
+  const rigType = normalizeText(record.rigType)
+
+  return Boolean(
+    rigType === 'erig' ||
+    rigType === 'hrig' ||
+    record.rigVolume ||
+    record.erigHrigComputedDose ||
+    record.erigHrigActualDose ||
+    record.erigHrigDateGiven,
+  )
 }
 
 function applyAnimalTotals(row: PhoReportRow, classification: DOHClassification) {

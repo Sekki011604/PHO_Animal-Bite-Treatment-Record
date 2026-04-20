@@ -9,10 +9,6 @@ interface Props {
   readOnly?: boolean
 }
 
-function RequiredAsterisk() {
-  return <span className="ml-1 text-red-500">*</span>
-}
-
 function SectionHeader({ title }: { title: string }) {
   return (
     <div className="mb-4 flex items-center gap-3">
@@ -23,13 +19,10 @@ function SectionHeader({ title }: { title: string }) {
   )
 }
 
-function FormRow({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function FormRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 py-1.5">
-      <span className="min-w-[140px] shrink-0 pt-2 text-sm font-medium text-muted-foreground">
-        {label}
-        {required && <RequiredAsterisk />}
-      </span>
+      <span className="min-w-[140px] shrink-0 pt-2 text-sm font-medium text-muted-foreground">{label}</span>
       <div className="flex-1">{children}</div>
     </div>
   )
@@ -47,6 +40,10 @@ function hasStoredRigTreatment(data: Partial<AnimalBiteRecord>) {
   return Boolean(data.rigType || data.rigVolume || data.erigHrigComputedDose || data.erigHrigActualDose || data.erigHrigDateGiven)
 }
 
+const GOVERNMENT_UNIT_NONE = 'None / Not Applicable'
+const GOVERNMENT_UNIT_OTHER = 'Other'
+const GOVERNMENT_UNIT_OPTIONS = ['Government Employee', 'PGP', 'Jail', 'Youth Center'] as const
+
 function computeRigVolume(weight: string | undefined, rigType: string | undefined) {
   const numericWeight = Number(weight)
 
@@ -54,6 +51,18 @@ function computeRigVolume(weight: string | undefined, rigType: string | undefine
   if (rigType === 'erig') return ((numericWeight * 40) / 200).toFixed(2)
   if (rigType === 'hrig') return ((numericWeight * 20) / 150).toFixed(2)
   return ''
+}
+
+function resolveGovernmentUnitSelection(data: Partial<AnimalBiteRecord>) {
+  const govOffice = data.govOffice?.trim() || ''
+
+  if (data.isGovEmployee === false) return GOVERNMENT_UNIT_NONE
+  if (!govOffice) return data.isGovEmployee === true ? 'Government Employee' : ''
+  if (GOVERNMENT_UNIT_OPTIONS.includes(govOffice as (typeof GOVERNMENT_UNIT_OPTIONS)[number])) {
+    return govOffice
+  }
+
+  return GOVERNMENT_UNIT_OTHER
 }
 
 function TextInput({
@@ -67,7 +76,6 @@ function TextInput({
   step,
   min,
   name,
-  required = false,
   disabled = false,
 }: {
   value: string
@@ -80,7 +88,6 @@ function TextInput({
   step?: string
   min?: number | string
   name?: string
-  required?: boolean
   disabled?: boolean
 }) {
   return (
@@ -91,7 +98,6 @@ function TextInput({
       onChange={e => onChange?.(e.target.value)}
       placeholder={placeholder}
       readOnly={readOnly}
-      required={required}
       disabled={disabled}
       inputMode={inputMode}
       step={step}
@@ -109,7 +115,6 @@ function CheckOption({
   type = 'checkbox',
   name,
   value,
-  required = false,
 }: {
   label: string
   checked: boolean
@@ -118,7 +123,6 @@ function CheckOption({
   type?: 'checkbox' | 'radio'
   name?: string
   value?: string
-  required?: boolean
 }) {
   return (
     <label className={choiceLabelClass(readOnly)}>
@@ -130,7 +134,6 @@ function CheckOption({
         onChange={e => onChange?.(e.target.checked)}
         className="pho-choice-control"
         disabled={readOnly}
-        required={required}
       />
       <span className={choiceTextClass(readOnly)}>{label}</span>
     </label>
@@ -143,21 +146,16 @@ function BooleanChoice({
   value,
   onChange,
   readOnly = false,
-  required = false,
 }: {
   label: string
   name: string
   value: boolean | undefined
   onChange: (value: boolean) => void
   readOnly?: boolean
-  required?: boolean
 }) {
   return (
     <div>
-      <span className="font-medium text-slate-700">
-        {label}
-        {required && <RequiredAsterisk />}
-      </span>
+      <span className="font-medium text-slate-700">{label}</span>
       <div className="ml-4 mt-1 flex flex-wrap gap-3">
         <CheckOption
           type="radio"
@@ -169,7 +167,6 @@ function BooleanChoice({
             if (checked) onChange(true)
           }}
           readOnly={readOnly}
-          required={required}
         />
         <CheckOption
           type="radio"
@@ -181,7 +178,6 @@ function BooleanChoice({
             if (checked) onChange(false)
           }}
           readOnly={readOnly}
-          required={required}
         />
       </div>
     </div>
@@ -194,7 +190,6 @@ function TextAreaInput({
   placeholder,
   rows,
   readOnly = false,
-  required = false,
   className = '',
 }: {
   value: string
@@ -202,7 +197,6 @@ function TextAreaInput({
   placeholder?: string
   rows: number
   readOnly?: boolean
-  required?: boolean
   className?: string
 }) {
   return (
@@ -210,7 +204,6 @@ function TextAreaInput({
       value={value}
       onChange={e => onChange?.(e.target.value)}
       readOnly={readOnly}
-      required={required}
       rows={rows}
       className={`w-full rounded border border-border bg-muted/30 p-2 text-sm resize-none focus:outline-none focus:border-primary invalid:border-red-500 ${className}`}
       placeholder={placeholder}
@@ -225,7 +218,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
   const initialRigType = initialData.rigType || (hasStoredRigTreatment(initialData) ? '' : 'none')
   const initialRigVolume = initialData.rigVolume || initialData.erigHrigComputedDose || ''
   const encodedByName = initialData.profiles?.full_name || 'Unknown Staff'
-
+  const initialGovernmentUnitSelection = resolveGovernmentUnitSelection(initialData)
   const [form, setForm] = useState<FormData>({
     registrationNumber: initialData.registrationNumber || '',
     dateOfVisit: initialData.dateOfVisit || today,
@@ -240,6 +233,8 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
     dateOfBirth: initialData.dateOfBirth || '',
     philhealthMember: initialData.philhealthMember || '',
     philhealthNumber: initialData.philhealthNumber || '',
+    isGovEmployee: initialData.isGovEmployee,
+    govOffice: initialData.govOffice || '',
     allergies: initialData.allergies || '',
     immunocompromisedStatus: initialData.immunocompromisedStatus || '',
     specifyIllness: initialData.specifyIllness || '',
@@ -289,9 +284,11 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
     ats: initialData.ats || '',
     diagnosisNotes: initialData.diagnosisNotes || '',
     progressNotes: initialData.progressNotes || '',
+    vaccinatorName: initialData.vaccinatorName || '',
     nurseInCharge: initialData.nurseInCharge || '',
     physicianCharge: initialData.physicianCharge || '',
   })
+  const [governmentUnitSelection, setGovernmentUnitSelection] = useState(initialGovernmentUnitSelection)
 
   // ── Auto-compute Age from Date of Birth ─────────────────────────────────────
   useEffect(() => {
@@ -342,17 +339,45 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!e.currentTarget.reportValidity()) {
-      return
-    }
-    onSubmit(form)
+
+    const normalizedGovernmentUnit = (() => {
+      if (governmentUnitSelection === GOVERNMENT_UNIT_NONE) {
+        return {
+          isGovEmployee: false,
+          govOffice: '',
+        }
+      }
+
+      if (governmentUnitSelection === GOVERNMENT_UNIT_OTHER) {
+        return {
+          isGovEmployee: true,
+          govOffice: (form.govOffice || '').trim(),
+        }
+      }
+
+      if (governmentUnitSelection) {
+        return {
+          isGovEmployee: true,
+          govOffice: governmentUnitSelection,
+        }
+      }
+
+      return {
+        isGovEmployee: undefined,
+        govOffice: '',
+      }
+    })()
+
+    onSubmit({
+      ...form,
+      ...normalizedGovernmentUnit,
+    })
   }
 
   const dateInput = (
     key: keyof FormData,
     extraClass = '',
     options: {
-      required?: boolean
       disabled?: boolean
       name?: string
     } = {},
@@ -363,7 +388,6 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
       value={(form[key] as string) || ''}
       onChange={e => set(key, e.target.value)}
       readOnly={readOnly}
-      required={options.required}
       disabled={options.disabled}
       className={`rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30 invalid:border-red-500 invalid:ring-red-200 disabled:cursor-not-allowed disabled:bg-secondary/30 ${extraClass}`}
     />
@@ -381,13 +405,57 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
         <div className="p-6 grid md:grid-cols-2 gap-6">
           {/* Left column */}
           <div className="space-y-3">
-            <FormRow label="Full Name" required={!readOnly}>
-              <TextInput name="fullName" value={form.fullName} onChange={v => set('fullName', v)} readOnly={readOnly} required={!readOnly} />
+            <FormRow label="Full Name">
+              <TextInput name="fullName" value={form.fullName} onChange={v => set('fullName', v)} readOnly={readOnly} />
             </FormRow>
-            <FormRow label="Municipality" required={!readOnly}>
+            <FormRow label="Government Unit">
+              <div className="space-y-2">
+                <select
+                  name="governmentUnit"
+                  value={governmentUnitSelection}
+                  onChange={(event) => {
+                    const nextValue = event.target.value
+                    setGovernmentUnitSelection(nextValue)
+
+                    if (nextValue === GOVERNMENT_UNIT_NONE || nextValue === '') {
+                      setForm(prev => ({ ...prev, isGovEmployee: nextValue === GOVERNMENT_UNIT_NONE ? false : undefined, govOffice: '' }))
+                      return
+                    }
+
+                    if (nextValue === GOVERNMENT_UNIT_OTHER) {
+                      setForm(prev => ({ ...prev, isGovEmployee: true, govOffice: '' }))
+                      return
+                    }
+
+                    setForm(prev => ({ ...prev, isGovEmployee: true, govOffice: nextValue }))
+                  }}
+                  disabled={readOnly}
+                 
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30 invalid:border-red-500 invalid:ring-red-200 disabled:cursor-not-allowed disabled:bg-secondary/30"
+                >
+                  <option value="">Select Government Unit</option>
+                  <option value={GOVERNMENT_UNIT_NONE}>{GOVERNMENT_UNIT_NONE}</option>
+                  {GOVERNMENT_UNIT_OPTIONS.map((unit) => (
+                    <option key={unit} value={unit}>{unit}</option>
+                  ))}
+                  <option value={GOVERNMENT_UNIT_OTHER}>{GOVERNMENT_UNIT_OTHER}</option>
+                </select>
+                {governmentUnitSelection === GOVERNMENT_UNIT_OTHER && (
+                  <TextInput
+                    name="govOffice"
+                    value={form.govOffice || ''}
+                    onChange={v => set('govOffice', v)}
+                    readOnly={readOnly}
+                   
+                    placeholder="Specify government unit"
+                  />
+                )}
+              </div>
+            </FormRow>
+            <FormRow label="Municipality">
               <select
                 name="municipality"
-                required={!readOnly}
+               
                 disabled={readOnly}
                 value={form.municipality || ''}
                 onChange={e => set('municipality', e.target.value)}
@@ -399,10 +467,10 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                 ))}
               </select>
             </FormRow>
-            <FormRow label="Barangay" required={!readOnly}>
+            <FormRow label="Barangay">
               <select
                 name="barangay"
-                required={!readOnly}
+               
                 disabled={readOnly || !form.municipality}
                 value={form.barangay || ''}
                 onChange={e => set('barangay', e.target.value)}
@@ -414,13 +482,13 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                 ))}
               </select>
             </FormRow>
-            <FormRow label="Contact Number" required={!readOnly}>
-              <TextInput name="contactNumber" value={form.contactNumber || ''} onChange={v => set('contactNumber', v)} readOnly={readOnly} required={!readOnly} />
+            <FormRow label="Contact Number">
+              <TextInput name="contactNumber" value={form.contactNumber || ''} onChange={v => set('contactNumber', v)} readOnly={readOnly} />
             </FormRow>
             <div className="flex items-center gap-4 text-sm">
               <span className="font-medium text-slate-700">
                 Gender
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               <label className={choiceLabelClass(readOnly)}>
                 <input
@@ -431,7 +499,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                   onChange={() => set('gender', 'male')}
                   className="pho-choice-control"
                   disabled={readOnly}
-                  required={!readOnly}
+                 
                 />
                 <span className={choiceTextClass(readOnly)}>Male</span>
               </label>
@@ -444,7 +512,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                   onChange={() => set('gender', 'female')}
                   className="pho-choice-control"
                   disabled={readOnly}
-                  required={!readOnly}
+                 
                 />
                 <span className={choiceTextClass(readOnly)}>Female</span>
               </label>
@@ -453,16 +521,16 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
 
           {/* Right column */}
           <div className="space-y-3">
-            <FormRow label="Date of Visit" required={!readOnly}>
-              {dateInput('dateOfVisit', 'w-full', { required: !readOnly })}
+            <FormRow label="Date of Visit">
+              {dateInput('dateOfVisit', 'w-full')}
             </FormRow>
-            <FormRow label="Reg. No." required={!readOnly}>
+            <FormRow label="Reg. No.">
               <TextInput
                 name="registrationNumber"
                 value={form.registrationNumber || ''}
                 onChange={v => set('registrationNumber', v)}
                 readOnly={readOnly}
-                required={!readOnly}
+               
               />
             </FormRow>
             {readOnly && (
@@ -471,13 +539,13 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
               </FormRow>
             )}
             {/* DOB + Auto-Age */}
-            <FormRow label="Date of Birth" required={!readOnly}>
-              {dateInput('dateOfBirth', 'w-full', { required: !readOnly })}
+            <FormRow label="Date of Birth">
+              {dateInput('dateOfBirth', 'w-full')}
             </FormRow>
             {/* Age is auto-computed — read-only display with visual cue */}
             <div className="flex items-start gap-2 mb-2">
               <span className="text-sm font-medium text-foreground min-w-[140px] pt-1 shrink-0">
-                Age {!readOnly && <RequiredAsterisk />} <span className="text-[10px] font-normal text-muted-foreground">(auto)</span>
+                Age <span className="text-[10px] font-normal text-muted-foreground">(auto)</span>
               </span>
               <div className="flex-1 flex items-center gap-2">
                 <input
@@ -485,7 +553,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                   type="text"
                   value={form.age || ''}
                   readOnly
-                  required={!readOnly}
+                 
                   placeholder="Auto-calculated from DOB"
                   className="border-b border-border bg-muted/30 text-sm w-full px-1 py-0.5 cursor-default text-foreground invalid:border-red-500"
                 />
@@ -502,11 +570,11 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                 )}
               </div>
             </div>
-            <FormRow label="Philhealth Member" required={!readOnly}>
-              <TextInput name="philhealthMember" value={form.philhealthMember || ''} onChange={v => set('philhealthMember', v)} readOnly={readOnly} required={!readOnly} />
+            <FormRow label="Philhealth Member">
+              <TextInput name="philhealthMember" value={form.philhealthMember || ''} onChange={v => set('philhealthMember', v)} readOnly={readOnly} />
             </FormRow>
-            <FormRow label="Philhealth Number" required={!readOnly}>
-              <TextInput name="philhealthNumber" value={form.philhealthNumber || ''} onChange={v => set('philhealthNumber', v)} readOnly={readOnly} required={!readOnly} />
+            <FormRow label="Philhealth Number">
+              <TextInput name="philhealthNumber" value={form.philhealthNumber || ''} onChange={v => set('philhealthNumber', v)} readOnly={readOnly} />
             </FormRow>
           </div>
         </div>
@@ -518,13 +586,13 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
         <div className="bg-card border border-border rounded-lg shadow-sm p-4">
           <SectionHeader title="Medical History" />
           <div className="space-y-3">
-            <FormRow label="Allergies" required={!readOnly}>
-              <TextInput name="allergies" value={form.allergies || ''} onChange={v => set('allergies', v)} readOnly={readOnly} required={!readOnly} />
+            <FormRow label="Allergies">
+              <TextInput name="allergies" value={form.allergies || ''} onChange={v => set('allergies', v)} readOnly={readOnly} />
             </FormRow>
             <div className="space-y-2 ml-2">
               <span className="font-medium text-slate-700">
                 Immunocompromised Status
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               <CheckOption
                 type="radio"
@@ -534,7 +602,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                 checked={form.immunocompromisedStatus === 'not_immunocompromised'}
                 onChange={checked => set('immunocompromisedStatus', checked ? 'not_immunocompromised' : '')}
                 readOnly={readOnly}
-                required={!readOnly}
+               
               />
               <CheckOption
                 type="radio"
@@ -544,13 +612,13 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                 checked={form.immunocompromisedStatus === 'immunocompromised'}
                 onChange={checked => set('immunocompromisedStatus', checked ? 'immunocompromised' : '')}
                 readOnly={readOnly}
-                required={!readOnly}
+               
               />
               {form.immunocompromisedStatus === 'immunocompromised' && (
                 <div className="ml-4 flex items-center gap-2 text-sm">
                   <span>
                     Specify illness
-                    {!readOnly && <RequiredAsterisk />}
+                    
                     :
                   </span>
                   <TextInput
@@ -559,7 +627,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     onChange={v => set('specifyIllness', v)}
                     className="w-32"
                     readOnly={readOnly}
-                    required={!readOnly && form.immunocompromisedStatus === 'immunocompromised'}
+                   
                   />
                 </div>
               )}
@@ -569,7 +637,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                 value={form.intakeSteroidsChloroquine}
                 onChange={v => set('intakeSteroidsChloroquine', v)}
                 readOnly={readOnly}
-                required={!readOnly}
+               
               />
             </div>
           </div>
@@ -585,14 +653,14 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                   <div key={key} className="flex items-center gap-2">
                     <span className="text-sm font-medium w-12 uppercase">
                       {key}
-                      {!readOnly && <RequiredAsterisk />}:
+                      :
                     </span>
                     <TextInput
                       name={key}
                       value={form[key] || ''}
                       onChange={v => set(key, v)}
                       readOnly={readOnly}
-                      required={!readOnly}
+                     
                     />
                   </div>
                 ))}
@@ -601,7 +669,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div>
               <div className="font-semibold text-sm uppercase tracking-wide mb-3 text-foreground">
                 Patient Weight
-                {!readOnly && <RequiredAsterisk />}
+                
               </div>
               <TextInput
                 name="patientWeight"
@@ -613,7 +681,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                 inputMode="decimal"
                 min="0"
                 step="0.01"
-                required={!readOnly}
+               
               />
             </div>
           </div>
@@ -630,7 +698,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div className="flex items-center gap-3 flex-wrap">
               <span className="font-medium text-slate-700">
                 Biting Animal:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               {['dog', 'cat'].map(animal => (
                 <CheckOption
@@ -644,7 +712,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('bitingAnimal', animal)
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
               ))}
               <CheckOption
@@ -657,7 +725,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                   if (checked) set('bitingAnimal', 'others')
                 }}
                 readOnly={readOnly}
-                required={!readOnly}
+               
               />
               {form.bitingAnimal === 'others' && (
                 <TextInput
@@ -666,7 +734,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                   onChange={v => set('bitingAnimalOthers', v)}
                   className="w-24"
                   readOnly={readOnly}
-                  required={!readOnly && form.bitingAnimal === 'others'}
+                 
                 />
               )}
             </div>
@@ -675,7 +743,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div className="flex items-center gap-3">
               <span className="font-medium text-slate-700">
                 Ownership:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               {['owned', 'stray'].map(o => (
                 <CheckOption
@@ -689,7 +757,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('ownership', o)
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
               ))}
             </div>
@@ -698,7 +766,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div>
               <span className="font-medium">
                 Anti Rabies Vaccination:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               <div className="ml-4 mt-1 space-y-1">
                 <CheckOption
@@ -711,7 +779,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('antiRabiesVaccination', 'with_vaccination')
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
                 <CheckOption
                   type="radio"
@@ -723,7 +791,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('antiRabiesVaccination', 'none')
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
               </div>
             </div>
@@ -732,7 +800,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div className="flex items-center gap-3 flex-wrap">
               <span className="font-medium text-slate-700">
                 Category:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               {['I', 'II', 'III'].map(cat => (
                 <CheckOption
@@ -746,7 +814,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('category', cat)
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
               ))}
             </div>
@@ -755,7 +823,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div className="flex items-center gap-3">
               <span className="font-medium text-slate-700">
                 Circumstance:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               {['provoked', 'unprovoked'].map(c => (
                 <CheckOption
@@ -769,7 +837,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('circumstance', c)
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
               ))}
             </div>
@@ -778,7 +846,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div className="flex items-center gap-3">
               <span className="font-medium text-slate-700">
                 Type of Exposure:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               {['bite', 'non_bite'].map(t => (
                 <CheckOption
@@ -792,7 +860,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('typeOfExposure', t)
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
               ))}
             </div>
@@ -800,24 +868,24 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div className="flex items-center gap-2">
               <span className="font-medium">
                 Date of Exposure:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
-              {dateInput('dateOfExposure', '', { required: !readOnly })}
+              {dateInput('dateOfExposure')}
             </div>
 
             <div className="flex items-center gap-2">
               <span className="font-medium">
                 Place of Exposure:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
-              <TextInput name="placeOfExposure" value={form.placeOfExposure || ''} onChange={v => set('placeOfExposure', v)} readOnly={readOnly} required={!readOnly} />
+              <TextInput name="placeOfExposure" value={form.placeOfExposure || ''} onChange={v => set('placeOfExposure', v)} readOnly={readOnly} />
             </div>
 
             {/* Human ARV */}
             <div>
               <span className="font-medium">
                 Human Anti Rabies Vaccination:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               <div className="ml-4 mt-1 space-y-1">
                 <div>
@@ -831,17 +899,15 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                       if (checked) set('humanArvStatus', 'complete')
                     }}
                     readOnly={readOnly}
-                    required={!readOnly}
+                   
                   />
                   {(form.humanArvStatus === 'complete' || form.humanArvStatus === 'incomplete') && (
                     <div className="ml-6 flex items-center gap-2 text-xs mt-1">
                       <span>
                         Date of last Vaccination:
-                        {!readOnly && <RequiredAsterisk />}
+                        
                       </span>
-                      {dateInput('dateLastVaccination', '', {
-                        required: !readOnly && (form.humanArvStatus === 'complete' || form.humanArvStatus === 'incomplete'),
-                      })}
+                      {dateInput('dateLastVaccination')}
                     </div>
                   )}
                 </div>
@@ -855,7 +921,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('humanArvStatus', 'incomplete')
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
                 <CheckOption
                   type="radio"
@@ -867,7 +933,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('humanArvStatus', 'none')
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
               </div>
             </div>
@@ -876,13 +942,13 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div>
               <span className="font-medium block mb-1">
                 Bite Site / Body Part Notes:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               <TextAreaInput
                 value={form.biteSiteNotes || ''}
                 onChange={v => set('biteSiteNotes', v)}
                 readOnly={readOnly}
-                required={!readOnly}
+               
                 rows={2}
                 placeholder="Describe bite location on body..."
               />
@@ -895,24 +961,24 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
           <SectionHeader title="Anti Rabies Vaccine" />
           <div className="space-y-3 text-sm">
             <div className="space-y-2 ml-1">
-              <BooleanChoice label="Washing of bite wound" name="washingBiteWound" value={form.washingBiteWound} onChange={v => set('washingBiteWound', v)} readOnly={readOnly} required={!readOnly} />
-              <BooleanChoice label="Full Regimen" name="fullRegimen" value={form.fullRegimen} onChange={v => set('fullRegimen', v)} readOnly={readOnly} required={!readOnly} />
-              <BooleanChoice label="Booster" name="booster" value={form.booster} onChange={v => set('booster', v)} readOnly={readOnly} required={!readOnly} />
+              <BooleanChoice label="Washing of bite wound" name="washingBiteWound" value={form.washingBiteWound} onChange={v => set('washingBiteWound', v)} readOnly={readOnly} />
+              <BooleanChoice label="Full Regimen" name="fullRegimen" value={form.fullRegimen} onChange={v => set('fullRegimen', v)} readOnly={readOnly} />
+              <BooleanChoice label="Booster" name="booster" value={form.booster} onChange={v => set('booster', v)} readOnly={readOnly} />
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="font-medium w-28 shrink-0">Generic Name{!readOnly && <RequiredAsterisk />}:</span>
-              <TextInput name="vaccineGenericName" value={form.vaccineGenericName || ''} onChange={v => set('vaccineGenericName', v)} readOnly={readOnly} required={!readOnly} />
+              <span className="font-medium w-28 shrink-0">Generic Name:</span>
+              <TextInput name="vaccineGenericName" value={form.vaccineGenericName || ''} onChange={v => set('vaccineGenericName', v)} readOnly={readOnly} />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium w-28 shrink-0">Brand Name{!readOnly && <RequiredAsterisk />}:</span>
-              <TextInput name="vaccineBrandName" value={form.vaccineBrandName || ''} onChange={v => set('vaccineBrandName', v)} readOnly={readOnly} required={!readOnly} />
+              <span className="font-medium w-28 shrink-0">Brand Name:</span>
+              <TextInput name="vaccineBrandName" value={form.vaccineBrandName || ''} onChange={v => set('vaccineBrandName', v)} readOnly={readOnly} />
             </div>
 
             <div className="flex items-center gap-3">
               <span className="font-medium text-slate-700">
                 Route:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               {['id', 'im'].map(r => (
                 <CheckOption
@@ -926,9 +992,20 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('vaccineRoute', r)
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
               ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="font-medium w-28 shrink-0">Vaccinator Name:</span>
+              <TextInput
+                name="vaccinatorName"
+                value={form.vaccinatorName || ''}
+                onChange={v => set('vaccinatorName', v)}
+                readOnly={readOnly}
+                placeholder="Optional vaccinator name"
+              />
             </div>
 
             {/* Vaccine Schedule */}
@@ -966,7 +1043,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div>
               <span className="font-medium block mb-1 text-slate-700">
                 Status of Animal after Day 14:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               <div className="flex gap-3 ml-2">
                 {['alive', 'dead', 'lost'].map(s => (
@@ -981,7 +1058,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                       if (checked) set('animalStatusAfterDay14', s)
                     }}
                     readOnly={readOnly}
-                    required={!readOnly}
+                   
                   />
                 ))}
               </div>
@@ -994,7 +1071,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                 <div>
                   <span className="font-medium block mb-1 text-slate-700">
                     RIG Type:
-                    {!readOnly && <RequiredAsterisk />}
+                    
                   </span>
                   <div className="flex flex-wrap gap-3 ml-1">
                     {[
@@ -1011,7 +1088,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                           onChange={() => set('rigType', value)}
                           className="pho-choice-control"
                           disabled={readOnly}
-                          required={!readOnly}
+                         
                         />
                         <span className={choiceTextClass(readOnly)}>{label}</span>
                       </label>
@@ -1019,10 +1096,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs w-28 shrink-0">
-                    Computed Volume
-                    {!readOnly && form.rigType !== 'none' && <RequiredAsterisk />}:
-                  </span>
+                  <span className="text-xs w-28 shrink-0">Computed Volume:</span>
                   <TextInput
                     name="rigVolume"
                     value={form.rigVolume || ''}
@@ -1032,15 +1106,12 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     type="number"
                     inputMode="decimal"
                     step="0.01"
-                    required={!readOnly && form.rigType !== 'none'}
+                   
                     disabled={form.rigType === 'none'}
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs w-28 shrink-0">
-                    Actual Volume
-                    {!readOnly && form.rigType !== 'none' && <RequiredAsterisk />}:
-                  </span>
+                  <span className="text-xs w-28 shrink-0">Actual Volume:</span>
                   <TextInput
                     name="erigHrigActualDose"
                     value={form.erigHrigActualDose || ''}
@@ -1050,17 +1121,13 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     inputMode="decimal"
                     min="0"
                     step="0.01"
-                    required={!readOnly && form.rigType !== 'none'}
+                   
                     disabled={!readOnly && form.rigType === 'none'}
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs w-28 shrink-0">
-                    Date Given
-                    {!readOnly && form.rigType !== 'none' && <RequiredAsterisk />}:
-                  </span>
+                  <span className="text-xs w-28 shrink-0">Date Given:</span>
                   {dateInput('erigHrigDateGiven', '', {
-                    required: !readOnly && form.rigType !== 'none',
                     disabled: !readOnly && form.rigType === 'none',
                   })}
                 </div>
@@ -1078,7 +1145,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             <div className="flex items-center gap-3 flex-wrap">
               <span className="font-medium text-slate-700">
                 Type of wound:
-                {!readOnly && <RequiredAsterisk />}
+                
               </span>
               {['clean', 'dirty'].map(t => (
                 <CheckOption
@@ -1092,7 +1159,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
                     if (checked) set('tetanusWoundType', t)
                   }}
                   readOnly={readOnly}
-                  required={!readOnly}
+                 
                 />
               ))}
             </div>
@@ -1146,12 +1213,12 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
       <div className="bg-card border border-border rounded-lg shadow-sm p-4">
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <span className="text-sm font-medium block mb-1">Nurse in Charge{!readOnly && <RequiredAsterisk />}</span>
-            <TextInput name="nurseInCharge" value={form.nurseInCharge || ''} onChange={v => set('nurseInCharge', v)} readOnly={readOnly} required={!readOnly} />
+            <span className="text-sm font-medium block mb-1">Nurse in Charge</span>
+            <TextInput name="nurseInCharge" value={form.nurseInCharge || ''} onChange={v => set('nurseInCharge', v)} readOnly={readOnly} />
           </div>
           <div>
-            <span className="text-sm font-medium block mb-1">Physician in Charge{!readOnly && <RequiredAsterisk />}</span>
-            <TextInput name="physicianCharge" value={form.physicianCharge || ''} onChange={v => set('physicianCharge', v)} readOnly={readOnly} required={!readOnly} />
+            <span className="text-sm font-medium block mb-1">Physician in Charge</span>
+            <TextInput name="physicianCharge" value={form.physicianCharge || ''} onChange={v => set('physicianCharge', v)} readOnly={readOnly} />
           </div>
         </div>
       </div>
@@ -1171,3 +1238,4 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
     </form>
   )
 }
+

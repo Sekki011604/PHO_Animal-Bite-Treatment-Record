@@ -22,6 +22,11 @@ function asBool(value: unknown) {
   return false
 }
 
+function asOptionalBool(value: unknown) {
+  if (value == null || value === '') return undefined
+  return asBool(value)
+}
+
 function asProfile(value: unknown): AnimalBiteRecord['profiles'] {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
 
@@ -53,6 +58,8 @@ export function mapAnimalBiteRecord(r: Record<string, unknown>): AnimalBiteRecor
     dateOfBirth: asText(pick(r, 'dateOfBirth', 'date_of_birth')),
     philhealthMember: asText(pick(r, 'philhealthMember', 'philhealth_member')),
     philhealthNumber: asText(pick(r, 'philhealthNumber', 'philhealth_number')),
+    isGovEmployee: asOptionalBool(pick(r, 'isGovEmployee', 'is_gov_employee')),
+    govOffice: asText(pick(r, 'govOffice', 'gov_office')),
     allergies: asText(pick(r, 'allergies')),
     immunocompromisedStatus: asText(pick(r, 'immunocompromisedStatus', 'immunocompromised_status')),
     specifyIllness: asText(pick(r, 'specifyIllness', 'specify_illness')),
@@ -102,6 +109,7 @@ export function mapAnimalBiteRecord(r: Record<string, unknown>): AnimalBiteRecor
     ats: asText(pick(r, 'ats')),
     diagnosisNotes: asText(pick(r, 'diagnosisNotes', 'diagnosis_notes')),
     progressNotes: asText(pick(r, 'progressNotes', 'progress_notes')),
+    vaccinatorName: asText(pick(r, 'vaccinatorName', 'vaccinator_name')),
     nurseInCharge: asText(pick(r, 'nurseInCharge', 'nurse_in_charge')),
     physicianCharge: asText(pick(r, 'physicianCharge', 'physician_charge')),
     createdAt: asText(pick(r, 'createdAt', 'created_at')),

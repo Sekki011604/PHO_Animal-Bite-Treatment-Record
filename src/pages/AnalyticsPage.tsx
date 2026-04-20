@@ -1,4 +1,4 @@
-import { Button, EmptyState, Page, PageActions, PageBody, PageDescription, PageHeader, PageTitle, SearchInput, toast } from '@blinkdotnew/ui'
+import { Button, EmptyState, Page, PageActions, PageBody, PageDescription, PageHeader, PageTitle, toast } from '@blinkdotnew/ui'
 import { Download, LoaderCircle, Printer, RefreshCcw } from 'lucide-react'
 import { useAnimalBiteAnalytics } from '../hooks/useAnimalBiteAnalytics'
 import { AnalyticsOverview } from '../features/analytics/components/AnalyticsOverview'
@@ -16,12 +16,17 @@ export default function AnalyticsPage() {
     animal,
     age,
     topBarangays,
+    municipalityGender,
     startDate,
     endDate,
-    search,
+    selectedMunicipality,
+    selectedBarangay,
+    municipalityOptions,
+    barangayOptions,
     setStartDate,
     setEndDate,
-    setSearch,
+    setSelectedMunicipality,
+    setSelectedBarangay,
     resetFilters,
   } = useAnimalBiteAnalytics()
 
@@ -59,11 +64,10 @@ export default function AnalyticsPage() {
         <div className="executive-panel mb-6 p-5">
           <div className="mb-4">
             <div className="text-sm font-semibold text-foreground">Filter analytics</div>
-            <div className="page-lead mt-1">Refine reporting by date range or locate a patient, municipality, barangay, registration number, or physician.</div>
+            <div className="page-lead mt-1">Refine reporting by date range, municipality, and barangay.</div>
           </div>
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_auto_auto] xl:items-end">
-            <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by patient, municipality, barangay, registration number, physician..." />
-            <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
               <label className="flex min-w-[160px] flex-col gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <span>From</span>
                 <input
@@ -84,6 +88,33 @@ export default function AnalyticsPage() {
                   className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal text-foreground shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
                 />
               </label>
+              <label className="flex min-w-[180px] flex-col gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <span>Municipality</span>
+                <select
+                  value={selectedMunicipality}
+                  onChange={(e) => setSelectedMunicipality(e.target.value)}
+                  className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal text-foreground shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="">All Municipalities</option>
+                  {municipalityOptions.map((municipality) => (
+                    <option key={municipality} value={municipality}>{municipality}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex min-w-[180px] flex-col gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <span>Barangay</span>
+                <select
+                  value={selectedBarangay}
+                  onChange={(e) => setSelectedBarangay(e.target.value)}
+                  disabled={!selectedMunicipality}
+                  className="rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-normal text-foreground shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-secondary/30"
+                >
+                  <option value="">All Barangays</option>
+                  {barangayOptions.map((barangay) => (
+                    <option key={barangay} value={barangay}>{barangay}</option>
+                  ))}
+                </select>
+              </label>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button onClick={exportFiltered} disabled={filtered.length === 0 || exporting}>
@@ -101,9 +132,9 @@ export default function AnalyticsPage() {
         {isLoading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3" />Loading analytics...</div>
         ) : filtered.length === 0 ? (
-          <EmptyState title="No matching records" description="Try a different date range or search query to view analytics." />
+          <EmptyState title="No matching records" description="Try a different date range, municipality, or barangay filter to view analytics." />
         ) : (
-          <AnalyticsOverview kpis={kpis} trend={trend} category={category} animal={animal} age={age} topBarangays={topBarangays} />
+          <AnalyticsOverview kpis={kpis} trend={trend} category={category} animal={animal} age={age} topBarangays={topBarangays} municipalityGender={municipalityGender} />
         )}
       </PageBody>
     </Page>

@@ -3,26 +3,58 @@ import { AnimalBiteRecord, ageGroup } from '../types'
 export type CountDatum = { name: string; value: number }
 export type TrendDatum = { month: string; cases: number }
 export type DashboardKpi = { label: string; value: string; hint: string }
+export type MunicipalityGenderDatum = { municipality: string; male: number; female: number; total: number }
+export type RecordFilters = {
+  municipality?: string
+  barangay?: string
+}
 
 const inc = (map: Record<string, number>, key: string) => { map[key] = (map[key] || 0) + 1 }
 const sortCounts = (map: Record<string, number>) => Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+const normalize = (value?: string) => (value || '').trim().toLowerCase()
 
-export function filterRecords(records: AnimalBiteRecord[], search: string) {
+export function filterRecords(records: AnimalBiteRecord[], filters: RecordFilters) {
+  const municipality = normalize(filters.municipality)
+  const barangay = normalize(filters.barangay)
+
   return records.filter((r) => {
-    const hay = `${r.fullName} ${r.registrationNumber} ${r.address} ${r.barangay} ${r.municipality} ${r.physicianCharge}`.toLowerCase()
-    const matchesSearch = !search || hay.includes(search.toLowerCase())
-    return matchesSearch
+    const matchesMunicipality = !municipality || normalize(r.municipality) === municipality
+    const matchesBarangay = !barangay || normalize(r.barangay) === barangay
+
+    return matchesMunicipality && matchesBarangay
   })
 }
 
 export function buildDashboardKpis(records: AnimalBiteRecord[]): DashboardKpi[] {
   const prefix = new Date().toISOString().slice(0, 7)
+  const maleCount = records.filter((record) => normalize(record.gender) === 'male').length
+  const femaleCount = records.filter((record) => normalize(record.gender) === 'female').length
+  const municipalityCounts = new Map<string, number>()
+
+  records.forEach((record) => {
+    const municipality = record.municipality?.trim() || 'Unknown'
+    municipalityCounts.set(municipality, (municipalityCounts.get(municipality) || 0) + 1)
+  })
+
+  const leadingLocality = municipalityCounts.size
+    ? Array.from(municipalityCounts.entries()).sort((left, right) => {
+        if (right[1] !== left[1]) return right[1] - left[1]
+        return left[0].localeCompare(right[0])
+      })[0]
+    : null
+
+  const leadingLocalityName = leadingLocality?.[0] || 'N/A'
+  const leadingLocalityCount = leadingLocality?.[1] || 0
+  const localityHint = leadingLocality
+    ? `${leadingLocalityCount} case${leadingLocalityCount === 1 ? '' : 's'} recorded`
+    : 'No cases recorded'
+
   return [
     { label: 'Total Cases', value: String(records.length), hint: 'All submitted records' },
     { label: 'This Month', value: String(records.filter((r) => (r.dateOfVisit || '').startsWith(prefix)).length), hint: 'Current month submissions' },
-    { label: 'Category III', value: String(records.filter((r) => r.category === 'III').length), hint: 'High-priority exposures' },
-    { label: 'Wound Washed', value: String(records.filter((r) => r.washingBiteWound).length), hint: 'Immediate wound care given' },
-    { label: 'Full Regimen', value: String(records.filter((r) => r.fullRegimen).length), hint: 'Completed full PEP regimen' },
+    { label: 'Male Patients', value: String(maleCount), hint: 'Total male cases' },
+    { label: 'Female Patients', value: String(femaleCount), hint: 'Total female cases' },
+    { label: 'Leading Locality', value: leadingLocalityName, hint: localityHint },
   ]
 }
 
@@ -67,4 +99,26 @@ export function buildTopBarangays(records: AnimalBiteRecord[], limit = 8): Count
     inc(counts, barangay)
   })
   return sortCounts(counts).slice(0, limit)
+}
+
+export function buildMunicipalityGenderBreakdown(records: AnimalBiteRecord[]): MunicipalityGenderDatum[] {
+  const counts = new Map<string, MunicipalityGenderDatum>()
+
+  records.forEach((record) => {
+    const municipality = record.municipality?.trim() || 'Unknown'
+    const current = counts.get(municipality) ?? { municipality, male: 0, female: 0, total: 0 }
+
+    current.total += 1
+
+    const gender = (record.gender || '').trim().toLowerCase()
+    if (gender === 'male') current.male += 1
+    else if (gender === 'female') current.female += 1
+
+    counts.set(municipality, current)
+  })
+
+  return Array.from(counts.values()).sort((left, right) => {
+    if (right.total !== left.total) return right.total - left.total
+    return left.municipality.localeCompare(right.municipality)
+  })
 }

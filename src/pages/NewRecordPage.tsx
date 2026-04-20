@@ -20,6 +20,7 @@ export default function NewRecordPage() {
       }
 
       const now = new Date().toISOString()
+      const normalizedGovOffice = data.isGovEmployee ? (data.govOffice?.trim() || null) : null
       const payload = {
         encoded_by: user.id,
         registration_number: data.registrationNumber || '',
@@ -35,6 +36,8 @@ export default function NewRecordPage() {
         date_of_birth: data.dateOfBirth || null,
         philhealth_member: data.philhealthMember || '',
         philhealth_number: data.philhealthNumber || '',
+        is_gov_employee: data.isGovEmployee === true,
+        gov_office: normalizedGovOffice,
         allergies: data.allergies || '',
         immunocompromised_status: data.immunocompromisedStatus || '',
         specify_illness: data.specifyIllness || '',
@@ -84,6 +87,7 @@ export default function NewRecordPage() {
         ats: data.ats || '',
         diagnosis_notes: data.diagnosisNotes || '',
         progress_notes: data.progressNotes || '',
+        vaccinator_name: data.vaccinatorName || '',
         nurse_in_charge: data.nurseInCharge || '',
         physician_charge: data.physicianCharge || '',
         created_at: now,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck, Menu, X, UserPlus2, LogOut, Settings2, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck, Menu, X, UserPlus2, LogOut, ChevronDown } from 'lucide-react'
 import RecordsPage from './pages/RecordsPage'
 import NewRecordPage from './pages/NewRecordPage'
 import ViewRecordPage from './pages/ViewRecordPage'
@@ -89,7 +89,6 @@ function SidebarLayout({
     ...(userRole === 'admin'
       ? [
           { to: '/admin/create-staff', label: 'Manage Staff', icon: UserPlus2 },
-          { to: '/admin/system-maintenance', label: 'System Maintenance', icon: Settings2 },
         ]
       : []),
   ]

@@ -19,6 +19,8 @@ export interface AnimalBiteRecord {
   dateOfBirth?: string
   philhealthMember?: string
   philhealthNumber?: string
+  isGovEmployee?: boolean
+  govOffice?: string
   // Medical History
   allergies?: string
   immunocompromisedStatus?: string // 'not_immunocompromised' | 'immunocompromised' | ''
@@ -76,6 +78,7 @@ export interface AnimalBiteRecord {
   // Notes
   diagnosisNotes?: string
   progressNotes?: string
+  vaccinatorName?: string
   nurseInCharge?: string
   physicianCharge?: string
   createdAt?: string

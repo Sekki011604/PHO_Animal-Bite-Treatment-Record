@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import type { Session, User } from '@supabase/supabase-js'
+import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
 export type UserRole = 'admin' | 'staff' | null
@@ -20,10 +20,6 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 function normalizeRole(value: string | null | undefined): UserRole {
   if (value === 'admin' || value === 'staff') return value
   return null
-}
-
-function getFallbackRole(user: User | null): UserRole {
-  return normalizeRole(user?.user_metadata?.role)
 }
 
 function getFallbackFullName(user: User | null): string {
@@ -51,53 +47,33 @@ async function resolveUserProfile(user: User | null): Promise<ResolvedUserProfil
     }
   }
 
-  const fallbackRole = getFallbackRole(user)
   const fallbackFullName = getFallbackFullName(user)
 
   try {
-    const { data, error } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role, full_name')
       .eq('id', user.id)
-      .maybeSingle<{ role: string | null, full_name: string | null }>()
+      .single()
 
-    if (error) {
-      console.error('Failed to fetch authenticated user profile from Supabase.', error)
-
-      if (fallbackRole) {
-        return {
-          role: fallbackRole,
-          fullName: fallbackFullName,
-          authError: null,
-        }
-      }
+    if (profileError) {
+      console.error('Profile fetch error:', profileError)
 
       return {
         role: null,
         fullName: fallbackFullName,
-        authError: 'We could not load your account permissions. Please sign in again or contact an administrator.',
+        authError: 'We could not load your account profile. Please sign in again or contact an administrator.',
       }
     }
 
-    if (!data) {
-      console.error(`Missing profile record for authenticated user ${user.id}.`)
-
-      return {
-        role: null,
-        fullName: fallbackFullName,
-        authError: 'Your account profile is missing. Please contact an administrator.',
-      }
-    }
-
-    const resolvedRole = normalizeRole(data.role) ?? fallbackRole
-    const resolvedFullName = typeof data.full_name === 'string' && data.full_name.trim()
-      ? data.full_name.trim()
+    const resolvedFullName = typeof profile.full_name === 'string' && profile.full_name.trim()
+      ? profile.full_name.trim()
       : fallbackFullName
+    const resolvedRole = normalizeRole(profile.role)
 
     if (!resolvedRole) {
-      console.error(`Missing valid role for authenticated user ${user.id}.`, {
-        profileRole: data.role,
-        metadataRole: user.user_metadata?.role,
+      console.error(`Profile role is missing or invalid for authenticated user ${user.id}.`, {
+        profileRole: profile.role,
       })
 
       return {
@@ -113,20 +89,12 @@ async function resolveUserProfile(user: User | null): Promise<ResolvedUserProfil
       authError: null,
     }
   } catch (error) {
-    console.error('Unexpected error while resolving authenticated user profile.', error)
-
-    if (fallbackRole) {
-      return {
-        role: fallbackRole,
-        fullName: fallbackFullName,
-        authError: null,
-      }
-    }
+    console.error('Profile fetch error:', error)
 
     return {
       role: null,
       fullName: fallbackFullName,
-      authError: 'We could not verify your account permissions. Please sign in again or contact an administrator.',
+      authError: 'We could not load your account profile. Please sign in again or contact an administrator.',
     }
   }
 }
@@ -139,99 +107,137 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const clearAuthState = (nextAuthError: string | null = null) => {
+    setSession(null)
+    setUser(null)
+    setFullName('')
+    setRole(null)
+    setAuthError(nextAuthError)
+  }
+
+  const getAuthenticatedSessionState = async (nextSession: Session) => {
+    const resolvedProfile = await resolveUserProfile(nextSession.user)
+
+    return {
+      session: nextSession,
+      user: nextSession.user,
+      fullName: resolvedProfile.fullName,
+      role: resolvedProfile.role,
+      authError: resolvedProfile.authError,
+    }
+  }
+
   const refreshRole = async () => {
+    if (!user) {
+      clearAuthState()
+      return
+    }
+
     const resolvedProfile = await resolveUserProfile(user)
-    setRole(resolvedProfile.role)
     setFullName(resolvedProfile.fullName)
+    setRole(resolvedProfile.role)
     setAuthError(resolvedProfile.authError)
   }
 
   useEffect(() => {
     let isMounted = true
-    let hasResolvedAuthState = false
-    let lastSessionId: string | null = null
 
-    const applyAuthState = async (nextSession: Session | null) => {
-      if (!isMounted) return
+    const initializeAuth = async () => {
+      try {
+        const {
+          data: { session: currentSession },
+          error: sessionError,
+        } = await supabase.auth.getSession()
 
-      const nextUser = nextSession?.user ?? null
-      const nextSessionId = nextSession?.access_token ?? null
+        if (sessionError) throw sessionError
 
-      if (hasResolvedAuthState && lastSessionId === nextSessionId) {
+        if (currentSession) {
+          const nextAuthState = await getAuthenticatedSessionState(currentSession)
+
+          if (!isMounted) return
+
+          setSession(nextAuthState.session)
+          setUser(nextAuthState.user)
+          setFullName(nextAuthState.fullName)
+          setRole(nextAuthState.role)
+          setAuthError(nextAuthState.authError)
+        } else {
+          if (!isMounted) return
+          clearAuthState()
+        }
+      } catch (error) {
+        console.error('Auth initialization failed:', error)
+
+        if (isMounted) {
+          clearAuthState()
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void initializeAuth()
+
+    const handleAuthStateChange = async (event: AuthChangeEvent, nextSession: Session | null) => {
+      if (!isMounted || event === 'INITIAL_SESSION') {
         return
       }
 
-      const resolvedProfile = await resolveUserProfile(nextUser)
-
-      if (!isMounted) return
-
-      setSession(nextSession)
-      setUser(nextUser)
-      setRole(resolvedProfile.role)
-      setFullName(resolvedProfile.fullName)
-      setAuthError(resolvedProfile.authError)
-      lastSessionId = nextSessionId
-      hasResolvedAuthState = true
-    }
-
-    const bootstrap = async () => {
       try {
-        const { data } = await supabase.auth.getSession()
-        await applyAuthState(data.session)
+        if (event === 'SIGNED_OUT') {
+          clearAuthState()
+          return
+        }
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          if (nextSession) {
+            const nextAuthState = await getAuthenticatedSessionState(nextSession)
+
+            if (!isMounted) return
+
+            setSession(nextAuthState.session)
+            setUser(nextAuthState.user)
+            setFullName(nextAuthState.fullName)
+            setRole(nextAuthState.role)
+            setAuthError(nextAuthState.authError)
+          } else {
+            clearAuthState()
+          }
+        }
       } catch (error) {
-        console.error('Failed to restore Supabase session during app bootstrap.', error)
+        console.error('Auth state change handling failed:', error)
 
         if (isMounted) {
-          setSession(null)
-          setUser(null)
-          setRole(null)
-          setFullName('')
-          setAuthError('We could not restore your session. Please sign in again.')
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
+          if (nextSession) {
+            setSession(nextSession)
+            setUser(nextSession.user)
+            setFullName(getFallbackFullName(nextSession.user))
+            setRole(null)
+            setAuthError('We could not load your account profile. Please sign in again or contact an administrator.')
+          } else {
+            clearAuthState()
+          }
         }
       }
     }
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      try {
-        if (!isMounted) return
-        await applyAuthState(nextSession)
-      } catch (error) {
-        console.error('Failed to apply Supabase auth state change.', error)
-
-        if (isMounted) {
-          const nextUser = nextSession?.user ?? null
-          setSession(nextSession)
-          setUser(nextUser)
-          setRole(null)
-          setFullName(getFallbackFullName(nextUser))
-          setAuthError(nextUser ? 'We could not finish loading your account. Please sign in again or contact an administrator.' : null)
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      void handleAuthStateChange(event, nextSession)
     })
-
-    void bootstrap()
 
     return () => {
       isMounted = false
-      subscription.subscription.unsubscribe()
+      subscription.unsubscribe()
     }
   }, [])
 
   const signOut = async () => {
     await supabase.auth.signOut()
-    setSession(null)
-    setUser(null)
-    setFullName('')
-    setRole(null)
-    setAuthError(null)
+    clearAuthState()
     setLoading(false)
   }
 

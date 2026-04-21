@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck, Menu, X, UserPlus2, LogOut, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, FilePlus2, BarChart3, Building2, ShieldCheck, Menu, X, UserPlus2, LogOut, ChevronDown, AlertTriangle } from 'lucide-react'
 import RecordsPage from './pages/RecordsPage'
 import NewRecordPage from './pages/NewRecordPage'
 import ViewRecordPage from './pages/ViewRecordPage'
@@ -19,22 +19,45 @@ function LoadingScreen() {
   )
 }
 
+function AuthErrorScreen({
+  message,
+  onLogout,
+}: {
+  message: string
+  onLogout: () => Promise<void>
+}) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-white px-4">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-primary">
+          <AlertTriangle className="h-7 w-7" />
+        </div>
+        <h1 className="mt-5 text-xl font-semibold text-foreground">Account setup issue</h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{message}</p>
+        <button
+          type="button"
+          onClick={() => {
+            void onLogout()
+          }}
+          className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function LoginRoute() {
   const { user, loading } = useAuth()
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard', { replace: true })
-    }
-  }, [loading, user, navigate])
 
   if (loading) {
     return <LoadingScreen />
   }
 
   if (user) {
-    return <LoadingScreen />
+    return <Navigate to="/dashboard" replace />
   }
 
   return <LoginPage />
@@ -265,7 +288,7 @@ function SidebarLayout({
 }
 
 function AppRoutes() {
-  const { user, role, fullName, loading, signOut } = useAuth()
+  const { user, role, fullName, authError, loading, signOut } = useAuth()
 
   const handleLogout = async () => {
     await signOut()
@@ -273,6 +296,15 @@ function AppRoutes() {
 
   if (loading) {
     return <LoadingScreen />
+  }
+
+  if (user && (authError || !role)) {
+    return (
+      <AuthErrorScreen
+        message={authError ?? 'Your account could not be validated. Please sign in again or contact an administrator.'}
+        onLogout={handleLogout}
+      />
+    )
   }
 
   return (

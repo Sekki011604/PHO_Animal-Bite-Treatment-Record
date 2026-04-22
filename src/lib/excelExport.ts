@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { AnimalBiteRecord, ageGroup } from '../types'
+import { formatExposureLocation } from './exposureLocation'
 
 /**
  * Exports animal bite records into a formatted Excel report
@@ -82,7 +83,7 @@ export function exportToExcel(records: AnimalBiteRecord[], monthYear: string) {
     (r.circumstance || '').toUpperCase(),
     (r.typeOfExposure || '').replace('_', ' ').toUpperCase(),
     r.dateOfExposure || '',
-    r.placeOfExposure || '',
+    formatExposureLocation(r, { includeStreet: true }),
     r.antiRabiesVaccination === 'with_vaccination' ? 'Vaccinated' : (r.antiRabiesVaccination === 'none' ? 'None' : ''),
     r.humanArvStatus === 'complete' ? 'Complete' : r.humanArvStatus === 'incomplete' ? 'Incomplete' : r.humanArvStatus === 'none' ? 'None' : '',
     r.washingBiteWound ? 'Yes' : 'No',

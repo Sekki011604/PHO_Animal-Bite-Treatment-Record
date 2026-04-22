@@ -1,4 +1,5 @@
 import { AnimalBiteRecord } from '../types'
+import { formatExposureLocation } from '../lib/exposureLocation'
 
 export type DOHAgeBucket = 'under_15' | '15_and_above' | 'unknown'
 export type DOHBitingAnimalGroup = 'dog' | 'cat' | 'other' | 'unknown'
@@ -168,7 +169,7 @@ function resolveHighRiskCriteria(
   const lastVaccinationDate = parseDate(record.dateLastVaccination || null)
   const notesBlob = [
     record.biteSiteNotes,
-    record.placeOfExposure,
+    formatExposureLocation(record, { includeStreet: true }),
     record.progressNotes,
     record.diagnosisNotes,
     record.address,

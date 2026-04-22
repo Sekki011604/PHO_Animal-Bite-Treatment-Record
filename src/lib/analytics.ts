@@ -1,4 +1,5 @@
 import { AnimalBiteRecord, ageGroup } from '../types'
+import { getExposureBarangay, getExposureMunicipality } from './exposureLocation'
 
 export type CountDatum = { name: string; value: number }
 export type TrendDatum = { month: string; cases: number }
@@ -18,8 +19,8 @@ export function filterRecords(records: AnimalBiteRecord[], filters: RecordFilter
   const barangay = normalize(filters.barangay)
 
   return records.filter((r) => {
-    const matchesMunicipality = !municipality || normalize(r.municipality) === municipality
-    const matchesBarangay = !barangay || normalize(r.barangay) === barangay
+    const matchesMunicipality = !municipality || normalize(getExposureMunicipality(r)) === municipality
+    const matchesBarangay = !barangay || normalize(getExposureBarangay(r)) === barangay
 
     return matchesMunicipality && matchesBarangay
   })
@@ -32,7 +33,7 @@ export function buildDashboardKpis(records: AnimalBiteRecord[]): DashboardKpi[] 
   const municipalityCounts = new Map<string, number>()
 
   records.forEach((record) => {
-    const municipality = record.municipality?.trim() || 'Unknown'
+    const municipality = getExposureMunicipality(record) || 'Unknown'
     municipalityCounts.set(municipality, (municipalityCounts.get(municipality) || 0) + 1)
   })
 
@@ -54,7 +55,7 @@ export function buildDashboardKpis(records: AnimalBiteRecord[]): DashboardKpi[] 
     { label: 'This Month', value: String(records.filter((r) => (r.dateOfVisit || '').startsWith(prefix)).length), hint: 'Current month submissions' },
     { label: 'Male Patients', value: String(maleCount), hint: 'Total male cases' },
     { label: 'Female Patients', value: String(femaleCount), hint: 'Total female cases' },
-    { label: 'Leading Locality', value: leadingLocalityName, hint: localityHint },
+    { label: 'Leading Exposure Municipality', value: leadingLocalityName, hint: localityHint },
   ]
 }
 
@@ -95,7 +96,7 @@ export function buildBreakdowns(records: AnimalBiteRecord[]) {
 export function buildTopBarangays(records: AnimalBiteRecord[], limit = 8): CountDatum[] {
   const counts: Record<string, number> = {}
   records.forEach((r) => {
-    const barangay = (r.barangay || '').trim() || 'Unknown'
+    const barangay = getExposureBarangay(r) || 'Unknown'
     inc(counts, barangay)
   })
   return sortCounts(counts).slice(0, limit)
@@ -105,7 +106,7 @@ export function buildMunicipalityGenderBreakdown(records: AnimalBiteRecord[]): M
   const counts = new Map<string, MunicipalityGenderDatum>()
 
   records.forEach((record) => {
-    const municipality = record.municipality?.trim() || 'Unknown'
+    const municipality = getExposureMunicipality(record) || 'Unknown'
     const current = counts.get(municipality) ?? { municipality, male: 0, female: 0, total: 0 }
 
     current.total += 1

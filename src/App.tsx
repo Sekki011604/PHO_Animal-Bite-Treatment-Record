@@ -275,6 +275,7 @@ function SidebarLayout({
           <Routes>
             <Route path="/dashboard" element={<RecordsPage />} />
             <Route path="/new" element={<NewRecordPage />} />
+            <Route path="/record/:id/edit" element={<NewRecordPage />} />
             <Route path="/record/:id" element={<ViewRecordPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/admin/create-staff" element={userRole === 'admin' ? <CreateStaffPage /> : <Navigate to="/dashboard" replace />} />

@@ -5,7 +5,7 @@ import { municipalities, municipalityBarangayMap } from '../lib/municipalityBara
 interface Props {
   onSubmit: (data: Omit<AnimalBiteRecord, 'id' | 'createdAt' | 'updatedAt'>) => void
   saving: boolean
-  initialData?: Partial<AnimalBiteRecord>
+  initialData?: Partial<AnimalBiteRecord> | null
   readOnly?: boolean
 }
 
@@ -36,8 +36,8 @@ function choiceTextClass(readOnly = false) {
   return readOnly ? 'pho-choice-text-disabled' : 'pho-choice-text'
 }
 
-function hasStoredRigTreatment(data: Partial<AnimalBiteRecord>) {
-  return Boolean(data.rigType || data.rigVolume || data.erigHrigComputedDose || data.erigHrigActualDose || data.erigHrigDateGiven)
+function hasStoredRigTreatment(data: Partial<AnimalBiteRecord> | null | undefined) {
+  return Boolean(data?.rigType || data?.rigVolume || data?.erigHrigComputedDose || data?.erigHrigActualDose || data?.erigHrigDateGiven)
 }
 
 const GOVERNMENT_UNIT_NONE = 'None / Not Applicable'
@@ -53,11 +53,11 @@ function computeRigVolume(weight: string | undefined, rigType: string | undefine
   return ''
 }
 
-function resolveGovernmentUnitSelection(data: Partial<AnimalBiteRecord>) {
-  const govOffice = data.govOffice?.trim() || ''
+function resolveGovernmentUnitSelection(data: Partial<AnimalBiteRecord> | null | undefined) {
+  const govOffice = data?.govOffice?.trim() || ''
 
-  if (data.isGovEmployee === false) return GOVERNMENT_UNIT_NONE
-  if (!govOffice) return data.isGovEmployee === true ? 'Government Employee' : ''
+  if (data?.isGovEmployee === false) return GOVERNMENT_UNIT_NONE
+  if (!govOffice) return data?.isGovEmployee === true ? 'Government Employee' : ''
   if (GOVERNMENT_UNIT_OPTIONS.includes(govOffice as (typeof GOVERNMENT_UNIT_OPTIONS)[number])) {
     return govOffice
   }
@@ -213,82 +213,104 @@ function TextAreaInput({
 
 type FormData = Omit<AnimalBiteRecord, 'id' | 'createdAt' | 'updatedAt'>
 
-export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, readOnly = false }: Props) {
-  const today = new Date().toISOString().slice(0, 10)
-  const initialRigType = initialData.rigType || (hasStoredRigTreatment(initialData) ? '' : 'none')
-  const initialRigVolume = initialData.rigVolume || initialData.erigHrigComputedDose || ''
-  const encodedByName = initialData.profiles?.full_name || 'Unknown Staff'
-  const initialGovernmentUnitSelection = resolveGovernmentUnitSelection(initialData)
-  const [form, setForm] = useState<FormData>({
-    registrationNumber: initialData.registrationNumber || '',
-    dateOfVisit: initialData.dateOfVisit || today,
-    fullName: initialData.fullName || '',
-    municipality: initialData.municipality || '',
-    barangay: initialData.barangay || '',
-    address: initialData.address || '',
-    contactNumber: initialData.contactNumber || '',
-    age: initialData.age || '',
-    ageInMonths: initialData.ageInMonths,
-    gender: initialData.gender || '',
-    dateOfBirth: initialData.dateOfBirth || '',
-    philhealthMember: initialData.philhealthMember || '',
-    philhealthNumber: initialData.philhealthNumber || '',
-    isGovEmployee: initialData.isGovEmployee,
-    govOffice: initialData.govOffice || '',
-    allergies: initialData.allergies || '',
-    immunocompromisedStatus: initialData.immunocompromisedStatus || '',
-    specifyIllness: initialData.specifyIllness || '',
-    intakeSteroidsChloroquine: typeof initialData.intakeSteroidsChloroquine === 'boolean' ? initialData.intakeSteroidsChloroquine : undefined,
-    bp: initialData.bp || '',
-    hr: initialData.hr || '',
-    rr: initialData.rr || '',
-    temp: initialData.temp || '',
-    patientWeight: initialData.patientWeight || '',
+function buildFormData(initialData: Partial<AnimalBiteRecord> | null | undefined, today: string): FormData {
+  const source = initialData ?? {}
+  const initialRigType = source.rigType || (hasStoredRigTreatment(source) ? '' : 'none')
+  const initialRigVolume = source.rigVolume || source.erigHrigComputedDose || ''
+
+  return {
+    registrationNumber: source.registrationNumber || '',
+    dateOfVisit: source.dateOfVisit || today,
+    fullName: source.fullName || '',
+    municipality: source.municipality || '',
+    barangay: source.barangay || '',
+    address: source.address || '',
+    contactNumber: source.contactNumber || '',
+    age: source.age || '',
+    ageInMonths: source.ageInMonths,
+    gender: source.gender || '',
+    dateOfBirth: source.dateOfBirth || '',
+    philhealthMember: source.philhealthMember || '',
+    philhealthNumber: source.philhealthNumber || '',
+    isGovEmployee: source.isGovEmployee,
+    govOffice: source.govOffice || '',
+    allergies: source.allergies || '',
+    immunocompromisedStatus: source.immunocompromisedStatus || '',
+    specifyIllness: source.specifyIllness || '',
+    intakeSteroidsChloroquine: typeof source.intakeSteroidsChloroquine === 'boolean' ? source.intakeSteroidsChloroquine : undefined,
+    bp: source.bp || '',
+    hr: source.hr || '',
+    rr: source.rr || '',
+    temp: source.temp || '',
+    patientWeight: source.patientWeight || '',
     rigType: initialRigType,
     rigVolume: initialRigVolume,
-    bitingAnimal: initialData.bitingAnimal || '',
-    bitingAnimalOthers: initialData.bitingAnimalOthers || '',
-    ownership: initialData.ownership || '',
-    antiRabiesVaccination: initialData.antiRabiesVaccination || '',
-    category: initialData.category || '',
-    circumstance: initialData.circumstance || '',
-    typeOfExposure: initialData.typeOfExposure || '',
-    dateOfExposure: initialData.dateOfExposure || '',
-    placeOfExposure: initialData.placeOfExposure || '',
-    humanArvStatus: initialData.humanArvStatus || '',
-    dateLastVaccination: initialData.dateLastVaccination || '',
-    biteSiteNotes: initialData.biteSiteNotes || '',
-    washingBiteWound: typeof initialData.washingBiteWound === 'boolean' ? initialData.washingBiteWound : undefined,
-    fullRegimen: typeof initialData.fullRegimen === 'boolean' ? initialData.fullRegimen : undefined,
-    booster: typeof initialData.booster === 'boolean' ? initialData.booster : undefined,
-    vaccineGenericName: initialData.vaccineGenericName || '',
-    vaccineBrandName: initialData.vaccineBrandName || '',
-    vaccineRoute: initialData.vaccineRoute || '',
-    day0: initialData.day0 || '',
-    day0Location: initialData.day0Location || '',
-    day3: initialData.day3 || '',
-    day3Location: initialData.day3Location || '',
-    day7: initialData.day7 || '',
-    day7Location: initialData.day7Location || '',
-    day14: initialData.day14 || '',
-    day14Location: initialData.day14Location || '',
-    day2128: initialData.day2128 || '',
-    day2128Location: initialData.day2128Location || '',
-    animalStatusAfterDay14: initialData.animalStatusAfterDay14 || '',
-    erigHrigComputedDose: initialData.erigHrigComputedDose || '',
-    erigHrigActualDose: initialData.erigHrigActualDose || '',
-    erigHrigDateGiven: initialData.erigHrigDateGiven || '',
-    tetanusWoundType: initialData.tetanusWoundType || '',
-    tetanusDateLast: initialData.tetanusDateLast || '',
-    tetanusToxoid: initialData.tetanusToxoid || '',
-    ats: initialData.ats || '',
-    diagnosisNotes: initialData.diagnosisNotes || '',
-    progressNotes: initialData.progressNotes || '',
-    vaccinatorName: initialData.vaccinatorName || '',
-    nurseInCharge: initialData.nurseInCharge || '',
-    physicianCharge: initialData.physicianCharge || '',
-  })
-  const [governmentUnitSelection, setGovernmentUnitSelection] = useState(initialGovernmentUnitSelection)
+    bitingAnimal: source.bitingAnimal || '',
+    bitingAnimalOthers: source.bitingAnimalOthers || '',
+    ownership: source.ownership || '',
+    antiRabiesVaccination: source.antiRabiesVaccination || '',
+    category: source.category || '',
+    circumstance: source.circumstance || '',
+    typeOfExposure: source.typeOfExposure || '',
+    dateOfExposure: source.dateOfExposure || '',
+    exposureMunicipality: source.exposureMunicipality || '',
+    exposureBarangay: source.exposureBarangay || '',
+    exposureStreet: source.exposureStreet || source.placeOfExposure || '',
+    humanArvStatus: source.humanArvStatus || '',
+    dateLastVaccination: source.dateLastVaccination || '',
+    biteSiteNotes: source.biteSiteNotes || '',
+    washingBiteWound: typeof source.washingBiteWound === 'boolean' ? source.washingBiteWound : undefined,
+    fullRegimen: typeof source.fullRegimen === 'boolean' ? source.fullRegimen : undefined,
+    booster: typeof source.booster === 'boolean' ? source.booster : undefined,
+    vaccineGenericName: source.vaccineGenericName || '',
+    vaccineBrandName: source.vaccineBrandName || '',
+    vaccineRoute: source.vaccineRoute || '',
+    day0: source.day0 || '',
+    day0Location: source.day0Location || '',
+    day3: source.day3 || '',
+    day3Location: source.day3Location || '',
+    day7: source.day7 || '',
+    day7Location: source.day7Location || '',
+    day14: source.day14 || '',
+    day14Location: source.day14Location || '',
+    day2128: source.day2128 || '',
+    day2128Location: source.day2128Location || '',
+    animalStatusAfterDay14: source.animalStatusAfterDay14 || '',
+    erigHrigComputedDose: source.erigHrigComputedDose || '',
+    erigHrigActualDose: source.erigHrigActualDose || '',
+    erigHrigDateGiven: source.erigHrigDateGiven || '',
+    tetanusWoundType: source.tetanusWoundType || '',
+    tetanusDateLast: source.tetanusDateLast || '',
+    tetanusToxoid: source.tetanusToxoid || '',
+    ats: source.ats || '',
+    diagnosisNotes: source.diagnosisNotes || '',
+    progressNotes: source.progressNotes || '',
+    vaccinatorName: source.vaccinatorName || '',
+    nurseInCharge: source.nurseInCharge || '',
+    physicianCharge: source.physicianCharge || '',
+  }
+}
+
+export default function AnimalBiteForm({ onSubmit, saving, initialData = null, readOnly = false }: Props) {
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const safeInitialData = initialData ?? null
+  const initialDataKey = `${safeInitialData?.id ?? 'new'}:${safeInitialData?.updatedAt ?? ''}`
+  const initialDataForHydration = useMemo(() => safeInitialData, [initialDataKey])
+  const encodedByName = initialDataForHydration?.profiles?.full_name || 'Unknown Staff'
+  const isEditing = Boolean(initialDataForHydration?.id)
+  const [form, setForm] = useState<FormData>(() => buildFormData(initialDataForHydration, today))
+  const [governmentUnitSelection, setGovernmentUnitSelection] = useState(() => resolveGovernmentUnitSelection(initialDataForHydration))
+
+  useEffect(() => {
+    if (initialDataForHydration) {
+      setForm(buildFormData(initialDataForHydration, today))
+      setGovernmentUnitSelection(resolveGovernmentUnitSelection(initialDataForHydration))
+      return
+    }
+
+    setForm(buildFormData(null, today))
+    setGovernmentUnitSelection(resolveGovernmentUnitSelection(null))
+  }, [initialDataForHydration, today])
 
   // ── Auto-compute Age from Date of Birth ─────────────────────────────────────
   useEffect(() => {
@@ -329,6 +351,11 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
       return
     }
 
+    if (key === 'exposureMunicipality') {
+      setForm(prev => ({ ...prev, exposureMunicipality: String(value || ''), exposureBarangay: '' }))
+      return
+    }
+
     setForm(prev => ({ ...prev, [key]: value }))
   }
 
@@ -336,6 +363,11 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
     if (!form.municipality) return []
     return municipalityBarangayMap[form.municipality] || []
   }, [form.municipality])
+
+  const availableExposureBarangays = useMemo(() => {
+    if (!form.exposureMunicipality) return []
+    return municipalityBarangayMap[form.exposureMunicipality] || []
+  }, [form.exposureMunicipality])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -370,6 +402,9 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
 
     onSubmit({
       ...form,
+      exposureMunicipality: (form.exposureMunicipality || '').trim(),
+      exposureBarangay: (form.exposureBarangay || '').trim(),
+      exposureStreet: (form.exposureStreet || '').trim(),
       ...normalizedGovernmentUnit,
     })
   }
@@ -873,12 +908,53 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
               {dateInput('dateOfExposure')}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="font-medium">
+            <div className="space-y-3">
+              <span className="font-medium block">
                 Place of Exposure:
                 
               </span>
-              <TextInput name="placeOfExposure" value={form.placeOfExposure || ''} onChange={v => set('placeOfExposure', v)} readOnly={readOnly} />
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Municipality</span>
+                  <select
+                    name="exposureMunicipality"
+                    disabled={readOnly}
+                    value={form.exposureMunicipality || ''}
+                    onChange={e => set('exposureMunicipality', e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30 invalid:border-red-500 invalid:ring-red-200 disabled:cursor-not-allowed disabled:bg-secondary/30"
+                  >
+                    <option value="">Select Municipality</option>
+                    {municipalities.map(municipality => (
+                      <option key={municipality} value={municipality}>{municipality}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Barangay</span>
+                  <select
+                    name="exposureBarangay"
+                    disabled={readOnly || !form.exposureMunicipality}
+                    value={form.exposureBarangay || ''}
+                    onChange={e => set('exposureBarangay', e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:ring-2 focus:ring-ring/30 invalid:border-red-500 invalid:ring-red-200 disabled:cursor-not-allowed disabled:bg-secondary/30"
+                  >
+                    <option value="">{form.exposureMunicipality ? 'Select Barangay' : 'Select Municipality first'}</option>
+                    {availableExposureBarangays.map(barangay => (
+                      <option key={barangay} value={barangay}>{barangay}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Address / Street</span>
+                  <TextInput
+                    name="exposureStreet"
+                    value={form.exposureStreet || ''}
+                    onChange={v => set('exposureStreet', v)}
+                    readOnly={readOnly}
+                    placeholder="e.g. Rengel Road"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Human ARV */}
@@ -1231,7 +1307,7 @@ export default function AnimalBiteForm({ onSubmit, saving, initialData = {}, rea
             disabled={saving}
             className="bg-[hsl(210,70%,30%)] hover:bg-[hsl(210,70%,25%)] text-white font-semibold px-8 py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? 'Saving...' : 'Save Record'}
+            {saving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Record' : 'Save Record')}
           </button>
         </div>
       )}

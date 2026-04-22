@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Download, FilePlus2, LoaderCircle, Search, Trash2, Upload } from 'lucide-react'
+import { ArrowRight, Download, FilePlus2, LoaderCircle, Pencil, Search, Trash2, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { AnimalBiteRecord } from '../types'
 import { toast } from '@blinkdotnew/ui'
@@ -180,7 +180,7 @@ export default function RecordsPage() {
               <p className="page-lead mt-2 max-w-3xl">Monitor patient intake, treatment categories, and reporting output from a single operations dashboard.</p>
             </div>
             <button
-              onClick={() => navigate('/new')}
+              onClick={() => navigate('/new', { state: null })}
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-md transition hover:translate-y-[-1px]"
             >
               <FilePlus2 className="h-4 w-4" />
@@ -326,6 +326,15 @@ export default function RecordsPage() {
                     <td className="px-4 py-3 text-muted-foreground hidden xl:table-cell">{r.physicianCharge || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => navigate(`/record/${r.id}/edit`, {
+                            state: { record: r },
+                          })}
+                          className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
                         <button
                           onClick={() => navigate(`/record/${r.id}`)}
                           className="inline-flex items-center gap-1 rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-semibold text-secondary-foreground transition hover:bg-secondary/80"

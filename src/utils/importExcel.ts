@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx'
+import { buildLegacyPlaceOfExposure } from '../lib/exposureLocation'
 
 type ImportedAnimalBiteRecord = {
   registration_number: string
@@ -31,6 +32,9 @@ type ImportedAnimalBiteRecord = {
   circumstance: string
   type_of_exposure: string
   date_of_exposure: string | null
+  exposure_municipality: string
+  exposure_barangay: string
+  exposure_street: string
   place_of_exposure: string
   human_arv_status: string
   date_last_vaccination: string | null
@@ -81,6 +85,9 @@ type HeaderField =
   | 'physician_charge'
   | 'municipality'
   | 'barangay'
+  | 'exposure_municipality'
+  | 'exposure_barangay'
+  | 'exposure_street'
 
 type SheetDetection = {
   sheetName: string
@@ -167,6 +174,23 @@ const HEADER_SYNONYMS: Record<HeaderField, string[]> = {
     'barangay',
     'brgy',
     'barangaylocation',
+  ],
+  exposure_municipality: [
+    'exposuremunicipality',
+    'incidentmunicipality',
+    'municipalityofexposure',
+  ],
+  exposure_barangay: [
+    'exposurebarangay',
+    'incidentbarangay',
+    'barangayofexposure',
+  ],
+  exposure_street: [
+    'exposurestreet',
+    'exposureaddress',
+    'incidentstreet',
+    'incidentaddress',
+    'placeofexposure',
   ],
 }
 
@@ -364,6 +388,9 @@ function mapImportedRow(
 
   const ageValue = getMappedCell(row, headerMap.age)
   const ageInfo = parseAge(ageValue)
+  const exposureMunicipality = getMappedCell(row, headerMap.exposure_municipality)
+  const exposureBarangay = getMappedCell(row, headerMap.exposure_barangay)
+  const exposureStreet = getMappedCell(row, headerMap.exposure_street)
 
   return {
     registration_number: getMappedCell(row, headerMap.registration_number),
@@ -396,7 +423,15 @@ function mapImportedRow(
     circumstance: '',
     type_of_exposure: normalizeExposure(getMappedCell(row, headerMap.type_of_exposure)),
     date_of_exposure: null,
-    place_of_exposure: '',
+    exposure_municipality: exposureMunicipality,
+    exposure_barangay: exposureBarangay,
+    exposure_street: exposureStreet,
+    place_of_exposure: buildLegacyPlaceOfExposure({
+      exposureMunicipality,
+      exposureBarangay,
+      exposureStreet,
+      placeOfExposure: '',
+    }),
     human_arv_status: '',
     date_last_vaccination: null,
     bite_site_notes: '',

@@ -1,5 +1,6 @@
 import type { Worksheet } from 'exceljs'
 import { AnimalBiteRecord } from '../types'
+import { formatExposureLocation, getExposureBarangay, getExposureMunicipality, getExposureStreet } from '../lib/exposureLocation'
 import {
   computeDOHClassification,
   type DOHAnimalStatusGroup,
@@ -316,7 +317,7 @@ function condenseRows(rows: PhoReportRow[]) {
   const visibleRows = rows.slice(0, MAX_DETAIL_ROWS - 1)
   const overflowRow = rows.slice(MAX_DETAIL_ROWS - 1).reduce(
     (merged, current) => mergeRows(merged, current),
-    createEmptyRow('Other / Remaining Barangays'),
+    createEmptyRow('Other / Remaining Locations'),
   )
 
   return [...visibleRows, overflowRow]
@@ -495,8 +496,13 @@ function appendClassifiedRecordsSheet(workbook: WorkbookLike, records: Classifie
     { header: 'Date of Visit', key: 'dateOfVisit', width: 14 },
     { header: 'Registry No.', key: 'registrationNumber', width: 16 },
     { header: 'Full Name', key: 'fullName', width: 24 },
-    { header: 'Municipality', key: 'municipality', width: 18 },
-    { header: 'Barangay', key: 'barangay', width: 18 },
+    { header: 'Residential Municipality', key: 'municipality', width: 20 },
+    { header: 'Residential Barangay', key: 'barangay', width: 20 },
+    { header: 'Residential Address', key: 'address', width: 28 },
+    { header: 'Exposure Municipality', key: 'exposureMunicipality', width: 20 },
+    { header: 'Exposure Barangay', key: 'exposureBarangay', width: 20 },
+    { header: 'Exposure Street', key: 'exposureStreet', width: 24 },
+    { header: 'Exposure Location', key: 'exposureLocation', width: 28 },
     { header: 'Sex', key: 'gender', width: 10 },
     { header: 'Age', key: 'age', width: 12 },
     { header: 'DOH Age Bucket', key: 'ageBucket', width: 18 },
@@ -545,6 +551,11 @@ function appendClassifiedRecordsSheet(workbook: WorkbookLike, records: Classifie
       fullName: record.fullName || '',
       municipality: record.municipality || '',
       barangay: record.barangay || '',
+      address: record.address || '',
+      exposureMunicipality: getExposureMunicipality(record),
+      exposureBarangay: getExposureBarangay(record),
+      exposureStreet: getExposureStreet(record),
+      exposureLocation: formatExposureLocation(record, { includeStreet: true }),
       gender: formatGender(record.gender),
       age: record.age || '',
       ageBucket: formatAgeBucket(classification.ageBucket),
@@ -842,7 +853,7 @@ function getMunicipalityLabel(records: AnimalBiteRecord[]) {
   const municipalities = Array.from(
     new Set(
       records
-        .map((record) => record.municipality?.trim())
+        .map((record) => getExposureMunicipality(record))
         .filter((value): value is string => Boolean(value)),
     ),
   )
@@ -853,7 +864,7 @@ function getMunicipalityLabel(records: AnimalBiteRecord[]) {
 }
 
 function getLocationLabel(record: AnimalBiteRecord) {
-  return record.barangay?.trim() || record.municipality?.trim() || 'Unknown Location'
+  return getExposureBarangay(record) || 'N/A'
 }
 
 function getRecordDate(record: AnimalBiteRecord) {

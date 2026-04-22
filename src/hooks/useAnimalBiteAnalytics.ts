@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { mapAnimalBiteRecord } from '../lib/recordMapper'
+import { animalBiteRecordSelect, mapAnimalBiteRecord } from '../lib/recordMapper'
 import { buildBreakdowns, buildDashboardKpis, buildMunicipalityGenderBreakdown, buildTopBarangays, buildTrend, filterRecords } from '../lib/analytics'
+import { getExposureBarangay, getExposureMunicipality } from '../lib/exposureLocation'
 import { AnimalBiteRecord } from '../types'
 
 export function useAnimalBiteAnalytics() {
@@ -16,26 +17,7 @@ export function useAnimalBiteAnalytics() {
     queryFn: async () => {
       let dbQuery = supabase
         .from('animal_bite_records')
-        .select([
-          'id',
-          'registration_number',
-          'date_of_visit',
-          'full_name',
-          'municipality',
-          'barangay',
-          'address',
-          'physician_charge',
-          'category',
-          'washing_bite_wound',
-          'full_regimen',
-          'biting_animal',
-          'biting_animal_others',
-          'ownership',
-          'type_of_exposure',
-          'gender',
-          'age_in_months',
-          'created_at',
-        ].join(','))
+        .select(animalBiteRecordSelect)
 
       if (startDate) {
         dbQuery = dbQuery.gte('date_of_visit', startDate)
@@ -63,7 +45,7 @@ export function useAnimalBiteAnalytics() {
     return Array.from(
       new Set(
         records
-          .map(record => record.municipality?.trim())
+          .map(record => getExposureMunicipality(record))
           .filter((value): value is string => Boolean(value)),
       ),
     ).sort((left, right) => left.localeCompare(right))
@@ -75,8 +57,8 @@ export function useAnimalBiteAnalytics() {
     return Array.from(
       new Set(
         records
-          .filter(record => (record.municipality || '').trim() === selectedMunicipality)
-          .map(record => record.barangay?.trim())
+          .filter(record => getExposureMunicipality(record) === selectedMunicipality)
+          .map(record => getExposureBarangay(record))
           .filter((value): value is string => Boolean(value)),
       ),
     ).sort((left, right) => left.localeCompare(right))

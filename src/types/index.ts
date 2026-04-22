@@ -43,7 +43,10 @@ export interface AnimalBiteRecord {
   circumstance?: string // 'provoked' | 'unprovoked'
   typeOfExposure?: string // 'bite' | 'non_bite'
   dateOfExposure?: string
-  placeOfExposure?: string
+  exposureMunicipality?: string
+  exposureBarangay?: string
+  exposureStreet?: string
+  placeOfExposure?: string // Legacy combined incident location string for backward compatibility
   humanArvStatus?: string // 'complete' | 'incomplete' | 'none'
   dateLastVaccination?: string
   biteSiteNotes?: string

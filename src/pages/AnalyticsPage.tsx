@@ -64,7 +64,7 @@ export default function AnalyticsPage() {
         <div className="executive-panel mb-6 p-5">
           <div className="mb-4">
             <div className="text-sm font-semibold text-foreground">Filter analytics</div>
-            <div className="page-lead mt-1">Refine reporting by date range, municipality, and barangay.</div>
+            <div className="page-lead mt-1">Refine reporting by date range, exposure municipality, and exposure barangay.</div>
           </div>
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -89,7 +89,7 @@ export default function AnalyticsPage() {
                 />
               </label>
               <label className="flex min-w-[180px] flex-col gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                <span>Municipality</span>
+                <span>Exposure Municipality</span>
                 <select
                   value={selectedMunicipality}
                   onChange={(e) => setSelectedMunicipality(e.target.value)}
@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
                 </select>
               </label>
               <label className="flex min-w-[180px] flex-col gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                <span>Barangay</span>
+                <span>Exposure Barangay</span>
                 <select
                   value={selectedBarangay}
                   onChange={(e) => setSelectedBarangay(e.target.value)}
@@ -132,7 +132,7 @@ export default function AnalyticsPage() {
         {isLoading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3" />Loading analytics...</div>
         ) : filtered.length === 0 ? (
-          <EmptyState title="No matching records" description="Try a different date range, municipality, or barangay filter to view analytics." />
+          <EmptyState title="No matching records" description="Try a different date range, exposure municipality, or exposure barangay filter to view analytics." />
         ) : (
           <AnalyticsOverview kpis={kpis} trend={trend} category={category} animal={animal} age={age} topBarangays={topBarangays} municipalityGender={municipalityGender} />
         )}

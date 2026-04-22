@@ -40,12 +40,12 @@ export function AnalyticsOverview({
         </ChartCard>
       </div>
 
-      <ChartCard title="Gender Distribution by Municipality">
-        {municipalityGender.length ? <MunicipalityGenderChart data={municipalityGender} /> : <EmptyState title="No municipality data" description="Municipality and gender values are needed to build this view." />}
+      <ChartCard title="Gender Distribution by Exposure Municipality">
+        {municipalityGender.length ? <MunicipalityGenderChart data={municipalityGender} /> : <EmptyState title="No municipality data" description="Exposure municipality and gender values are needed to build this view." />}
       </ChartCard>
 
-      <ChartCard title="Top Barangays by Cases">
-        {topBarangays.length ? <DataTable columns={barangayColumns} data={topBarangays} /> : <EmptyState title="No barangay data" description="Addresses will be summarized here." />}
+      <ChartCard title="Top Exposure Barangays by Cases">
+        {topBarangays.length ? <DataTable columns={barangayColumns} data={topBarangays} /> : <EmptyState title="No barangay data" description="Incident locations will be summarized here." />}
       </ChartCard>
     </div>
   )
